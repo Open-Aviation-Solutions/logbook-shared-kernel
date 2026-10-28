@@ -85,7 +85,10 @@ the first release is a person's, in this order:
 
 1. **Publish the first version by hand**: `cargo publish` from `main`, once the
    crate itself is written, so that the first version is the real `0.1.0` and
-   not a placeholder.
+   not a placeholder. Then tag the published commit on `main` by hand, since
+   the workflow tags only a version it publishes itself:
+   `git tag v0.1.0 <commit> && git push origin v0.1.0` (a lightweight tag, as
+   the workflow makes, and as au-casa's `v0.1.0` is).
 2. **Set up GitHub**: create the `release` environment with a deployment rule
    allowing only the branch `main`, and protect `main` as
    `icao-shared-kernel`'s is: a pull request, the `check` status required,
@@ -101,9 +104,6 @@ done, GitHub creates the `release` environment with no rule on it.
 
 ## Commands
 
-```sh
-make test       # cargo test — the test suite
-make lint       # cargo clippy -- -D warnings
-make fmt        # cargo fmt
-make check      # lint + fmt check + licence headers + test
-```
+`make help` lists the targets; `make check` (lint with `cargo clippy
+--all-targets -- -D warnings`, format check, licence headers, tests) is what CI
+and the Release workflow run.

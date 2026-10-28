@@ -75,8 +75,8 @@ Report a problem, or propose a change, in this repository's
 
 ## Development
 
-Requires a Rust toolchain, a C linker (`build-essential` on Debian/Ubuntu) and
-`curl`. The first `make check` downloads
+Requires a Rust toolchain, a C linker (`build-essential` on Debian/Ubuntu),
+`git`, `curl` and `tar`. The first `make check` downloads
 [addlicense](https://github.com/google/addlicense)'s release binary into
 `.bin/`, and checks it against the checksum pinned in the `Makefile`.
 
