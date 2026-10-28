@@ -1,0 +1,17 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+[package]
+name = "logbook-shared-kernel"
+version = "0.1.0"
+edition = "2021"
+license = "MPL-2.0"
+description = "A pilot's logbook entry in ICAO's terms, and the interface through which a licensing authority supplies its rules."
+repository = "https://github.com/Open-Aviation-Solutions/logbook-shared-kernel"
+readme = "README.md"
+include = ["/src", "/tests", "/README.md", "/LICENSE"]
+
+[lib]
+name = "logbook_shared_kernel"
+path = "src/lib.rs"
