@@ -150,7 +150,9 @@ impl EventWindow {
 mod tests {
     use std::collections::BTreeMap;
 
-    use icao_shared_kernel::{Aircraft, Capacity, FlightDuration};
+    use icao_shared_kernel::{
+        Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
+    };
     use time::macros::date;
     use uuid::Uuid;
 
@@ -165,7 +167,11 @@ mod tests {
             date: on,
             subject: Subject::Flight {
                 flight: Uuid::nil(),
-                aircraft: Aircraft::create("C172", "VH", "ABC").unwrap(),
+                aircraft: Aircraft::new(
+                    AircraftType::parse("C172").unwrap(),
+                    AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC")
+                        .unwrap(),
+                ),
                 description: None,
                 sole_occupant: false,
             },

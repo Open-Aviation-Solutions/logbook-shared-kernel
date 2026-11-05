@@ -42,7 +42,7 @@ impl AuthorityId {
     /// The authority that issued a licence.
     pub fn of(licence: &Licence) -> Self {
         Self {
-            state: licence.issuing_state().to_owned(),
+            state: licence.issuing_state().to_string(),
             authority: licence.issuing_authority().to_owned(),
         }
     }

@@ -6,7 +6,9 @@ mod common;
 
 use aircraft_type_descriptions::{AirframeKind, EngineType};
 use common::{flight_parts, session_parts};
-use icao_shared_kernel::{Aircraft, AircraftType, Capacity, FlightDuration};
+use icao_shared_kernel::{
+    Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
+};
 use logbook_shared_kernel::{
     AircraftDescription, Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts,
     InstrumentTime, Subject,
@@ -22,7 +24,10 @@ fn flight(sole_occupant: bool) -> EntryParts {
     EntryParts {
         subject: Subject::Flight {
             flight: Uuid::nil(),
-            aircraft: Aircraft::create("C172", "VH", "ABC").unwrap(),
+            aircraft: Aircraft::new(
+                AircraftType::parse("C172").unwrap(),
+                AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC").unwrap(),
+            ),
             description: None,
             sole_occupant,
         },
