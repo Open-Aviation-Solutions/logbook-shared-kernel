@@ -56,8 +56,7 @@ pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
         subject: Subject::Session {
             session: Uuid::nil(),
             device: Uuid::nil(),
-            simulated_type: None,
-            description: None,
+            simulated: None,
         },
         ..flight_parts(id, capacity)
     }

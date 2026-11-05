@@ -4,10 +4,12 @@
 
 mod common;
 
+use aircraft_type_descriptions::{AirframeKind, EngineType};
 use common::{flight_parts, session_parts};
-use icao_shared_kernel::{Aircraft, Capacity, FlightDuration};
+use icao_shared_kernel::{Aircraft, AircraftType, Capacity, FlightDuration};
 use logbook_shared_kernel::{
-    Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts, InstrumentTime, Subject,
+    AircraftDescription, Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts,
+    InstrumentTime, Subject,
 };
 use uuid::Uuid;
 
@@ -30,6 +32,10 @@ fn flight(sole_occupant: bool) -> EntryParts {
 
 fn session() -> EntryParts {
     session_parts("e", Capacity::PilotInCommand)
+}
+
+fn description() -> AircraftDescription {
+    AircraftDescription::new(AirframeKind::LandPlane, 1, EngineType::Piston)
 }
 
 fn refused(parts: EntryParts) -> Vec<EntryError> {
@@ -57,6 +63,78 @@ fn a_sole_occupant_is_refused_with_flight_crew_named() {
 #[test]
 fn a_sole_occupant_with_no_one_else_named_is_accepted() {
     assert!(Entry::new(flight(true)).is_ok());
+}
+
+#[test]
+fn a_sole_occupant_is_refused_in_a_capacity_needing_another_pilot() {
+    for capacity in [
+        Capacity::CoPilot,
+        Capacity::PilotInCommandUnderSupervision,
+        Capacity::DualInstruction,
+    ] {
+        let parts = EntryParts {
+            capacity,
+            ..flight(true)
+        };
+        assert_eq!(
+            refused(parts),
+            [EntryError::SoleOccupantInCapacityNeedingAnotherPilot(
+                capacity
+            )]
+        );
+    }
+}
+
+#[test]
+fn a_capacity_needing_another_pilot_is_accepted_with_one_on_board() {
+    for capacity in [
+        Capacity::CoPilot,
+        Capacity::PilotInCommandUnderSupervision,
+        Capacity::DualInstruction,
+    ] {
+        let parts = EntryParts {
+            capacity,
+            ..flight(false)
+        };
+        assert!(Entry::new(parts).is_ok());
+    }
+}
+
+#[test]
+fn a_session_with_a_type_and_a_description_a_type_alone_or_neither_is_accepted() {
+    let c172 = || AircraftType::parse("C172").unwrap();
+    for simulated in [
+        Some((c172(), Some(description()))),
+        Some((c172(), None)),
+        None,
+    ] {
+        let subject = Subject::Session {
+            session: Uuid::nil(),
+            device: Uuid::nil(),
+            simulated,
+        };
+        assert!(Entry::new(EntryParts {
+            subject,
+            ..session()
+        })
+        .is_ok());
+    }
+}
+
+#[test]
+fn a_sole_occupant_as_co_pilot_is_refused_with_the_other_sole_occupant_refusals() {
+    let parts = EntryParts {
+        capacity: Capacity::CoPilot,
+        pilot_in_command: Some("A. Instructor".into()),
+        ..flight(true)
+    };
+    assert_eq!(
+        refused(parts),
+        [
+            EntryError::SoleOccupantWithPilotInCommand,
+            EntryError::SoleOccupantInCapacityNeedingAnotherPilot(Capacity::CoPilot)
+        ]
+    );
 }
 
 #[test]

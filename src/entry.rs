@@ -67,10 +67,10 @@ pub enum Subject {
         session: Uuid,
         /// The kernel's `FlightSimulationTrainingDevice`.
         device: Uuid,
-        /// The type of aircraft the device represented, if recorded.
-        simulated_type: Option<AircraftType>,
-        /// The description of that type, as the host found it.
-        description: Option<AircraftDescription>,
+        /// The type of aircraft the device represented, if recorded, and the
+        /// description of that type as the host found it (`None` when it
+        /// found none). A description is of a recorded type only.
+        simulated: Option<(AircraftType, Option<AircraftDescription>)>,
     },
 }
 
@@ -130,6 +130,24 @@ impl Entry {
             }
             if parts.flight_crew.iter().any(|name| !blank(name)) {
                 errors.push(EntryError::SoleOccupantWithFlightCrew);
+            }
+            // These capacities need another pilot on board. Annex 1: a
+            // co-pilot serves in a piloting capacity other than
+            // pilot-in-command, and pilot-in-command under supervision is a
+            // co-pilot acting under the pilot-in-command's supervision.
+            // Dual instruction has the instructor on board (Annex 1; CASR
+            // 1998 reg 61.010, dual flight: training "from a pilot
+            // instructor occupying a flight control seat"). That a solo
+            // entry is refused in these capacities is the owner's decision.
+            if matches!(
+                parts.capacity,
+                Capacity::CoPilot
+                    | Capacity::PilotInCommandUnderSupervision
+                    | Capacity::DualInstruction
+            ) {
+                errors.push(EntryError::SoleOccupantInCapacityNeedingAnotherPilot(
+                    parts.capacity,
+                ));
             }
         }
         if parts.night > parts.flight_time {
@@ -238,7 +256,9 @@ impl Entry {
 }
 
 /// A rule an entry's parts break. Its `Display` is plain English, for logs.
+/// Non-exhaustive: a rule added later is not a breaking change.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EntryError {
     /// A pilot-in-command is named, but the name is empty or only
     /// whitespace.
@@ -250,6 +270,10 @@ pub enum EntryError {
     SoleOccupantWithPilotInCommand,
     /// The pilot was the sole occupant, but flight crew are named.
     SoleOccupantWithFlightCrew,
+    /// The pilot was the sole occupant, but the capacity (co-pilot,
+    /// pilot-in-command under supervision, or dual instruction) needs
+    /// another pilot on board.
+    SoleOccupantInCapacityNeedingAnotherPilot(Capacity),
     /// More night than flight time.
     NightOverFlightTime,
     /// More instrument time than flight time: instrument flight time on a
@@ -272,6 +296,20 @@ impl fmt::Display for EntryError {
             }
             Self::SoleOccupantWithFlightCrew => {
                 f.write_str("a sole occupant's entry names flight crew")
+            }
+            Self::SoleOccupantInCapacityNeedingAnotherPilot(capacity) => {
+                let capacity = match capacity {
+                    Capacity::CoPilot => "co-pilot",
+                    Capacity::PilotInCommandUnderSupervision => {
+                        "pilot-in-command under supervision"
+                    }
+                    Capacity::DualInstruction => "dual instruction",
+                    _ => "a capacity that",
+                };
+                write!(
+                    f,
+                    "a sole occupant cannot log {capacity}: it needs another pilot on board"
+                )
             }
             Self::NightOverFlightTime => f.write_str("the night time is more than the flight time"),
             Self::InstrumentOverFlightTime => {
