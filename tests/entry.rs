@@ -290,3 +290,15 @@ fn an_approach_holds_its_procedure_and_aerodrome() {
     assert_eq!(approach.procedure(), ApproachType::Ils);
     assert_eq!(*approach.aerodrome(), "YSBK");
 }
+
+#[test]
+fn an_approach_is_built_from_the_re_exported_approach_types() {
+    use logbook_shared_kernel::{ApproachType, RnpApchMinima};
+    let approach = Approach::new(
+        ApproachType::RnpApch {
+            minima: RnpApchMinima::Lpv,
+        },
+        LocationIndicator::parse("YSBK").unwrap(),
+    );
+    assert!(approach.procedure().is_3d());
+}
