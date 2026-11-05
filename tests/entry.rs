@@ -66,19 +66,32 @@ fn a_sole_occupant_with_no_one_else_named_is_accepted() {
 }
 
 #[test]
-fn a_sole_occupant_is_refused_as_co_pilot_or_pilot_in_command_under_supervision() {
-    for capacity in [Capacity::CoPilot, Capacity::PilotInCommandUnderSupervision] {
+fn a_sole_occupant_is_refused_in_a_capacity_needing_another_pilot() {
+    for capacity in [
+        Capacity::CoPilot,
+        Capacity::PilotInCommandUnderSupervision,
+        Capacity::DualInstruction,
+    ] {
         let parts = EntryParts {
             capacity,
             ..flight(true)
         };
-        assert_eq!(refused(parts), [EntryError::SoleOccupantAsCoPilot]);
+        assert_eq!(
+            refused(parts),
+            [EntryError::SoleOccupantInCapacityNeedingAnotherPilot(
+                capacity
+            )]
+        );
     }
 }
 
 #[test]
-fn a_co_pilot_with_another_pilot_on_board_is_accepted() {
-    for capacity in [Capacity::CoPilot, Capacity::PilotInCommandUnderSupervision] {
+fn a_capacity_needing_another_pilot_is_accepted_with_one_on_board() {
+    for capacity in [
+        Capacity::CoPilot,
+        Capacity::PilotInCommandUnderSupervision,
+        Capacity::DualInstruction,
+    ] {
         let parts = EntryParts {
             capacity,
             ..flight(false)
@@ -119,7 +132,7 @@ fn a_sole_occupant_as_co_pilot_is_refused_with_the_other_sole_occupant_refusals(
         refused(parts),
         [
             EntryError::SoleOccupantWithPilotInCommand,
-            EntryError::SoleOccupantAsCoPilot
+            EntryError::SoleOccupantInCapacityNeedingAnotherPilot(Capacity::CoPilot)
         ]
     );
 }
