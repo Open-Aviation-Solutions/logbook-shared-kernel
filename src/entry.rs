@@ -67,10 +67,10 @@ pub enum Subject {
         session: Uuid,
         /// The kernel's `FlightSimulationTrainingDevice`.
         device: Uuid,
-        /// The type of aircraft the device represented, if recorded.
-        simulated_type: Option<AircraftType>,
-        /// The description of that type, as the host found it.
-        description: Option<AircraftDescription>,
+        /// The type of aircraft the device represented, if recorded, and the
+        /// description of that type as the host found it (`None` when it
+        /// found none). A description is of a recorded type only.
+        simulated: Option<(AircraftType, Option<AircraftDescription>)>,
     },
 }
 
@@ -140,14 +140,6 @@ impl Entry {
             ) {
                 errors.push(EntryError::SoleOccupantAsCoPilot);
             }
-        }
-        if let Subject::Session {
-            simulated_type: None,
-            description: Some(_),
-            ..
-        } = parts.subject
-        {
-            errors.push(EntryError::SessionDescriptionWithoutType);
         }
         if parts.night > parts.flight_time {
             errors.push(EntryError::NightOverFlightTime);
@@ -255,7 +247,9 @@ impl Entry {
 }
 
 /// A rule an entry's parts break. Its `Display` is plain English, for logs.
+/// Non-exhaustive: a rule added later is not a breaking change.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum EntryError {
     /// A pilot-in-command is named, but the name is empty or only
     /// whitespace.
@@ -270,8 +264,6 @@ pub enum EntryError {
     /// The pilot was the sole occupant, but the capacity is co-pilot or
     /// pilot-in-command under supervision, which need another pilot on board.
     SoleOccupantAsCoPilot,
-    /// A session describes the simulated type, but records no type.
-    SessionDescriptionWithoutType,
     /// More night than flight time.
     NightOverFlightTime,
     /// More instrument time than flight time: instrument flight time on a
@@ -298,9 +290,6 @@ impl fmt::Display for EntryError {
             Self::SoleOccupantAsCoPilot => f.write_str(
                 "a sole occupant cannot be a co-pilot or pilot-in-command under supervision",
             ),
-            Self::SessionDescriptionWithoutType => {
-                f.write_str("a session describes a simulated type but records none")
-            }
             Self::NightOverFlightTime => f.write_str("the night time is more than the flight time"),
             Self::InstrumentOverFlightTime => {
                 f.write_str("the instrument time is more than the flight time")

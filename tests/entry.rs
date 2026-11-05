@@ -38,21 +38,6 @@ fn description() -> AircraftDescription {
     AircraftDescription::new(AirframeKind::LandPlane, 1, EngineType::Piston)
 }
 
-fn session_with(
-    simulated_type: Option<AircraftType>,
-    description: Option<AircraftDescription>,
-) -> EntryParts {
-    EntryParts {
-        subject: Subject::Session {
-            session: Uuid::nil(),
-            device: Uuid::nil(),
-            simulated_type,
-            description,
-        },
-        ..session()
-    }
-}
-
 fn refused(parts: EntryParts) -> Vec<EntryError> {
     Entry::new(parts).unwrap_err()
 }
@@ -103,19 +88,40 @@ fn a_co_pilot_with_another_pilot_on_board_is_accepted() {
 }
 
 #[test]
-fn a_session_with_a_description_but_no_type_is_refused() {
-    let parts = session_with(None, Some(description()));
-    assert_eq!(refused(parts), [EntryError::SessionDescriptionWithoutType]);
+fn a_session_with_a_type_and_a_description_a_type_alone_or_neither_is_accepted() {
+    let c172 = || AircraftType::parse("C172").unwrap();
+    for simulated in [
+        Some((c172(), Some(description()))),
+        Some((c172(), None)),
+        None,
+    ] {
+        let subject = Subject::Session {
+            session: Uuid::nil(),
+            device: Uuid::nil(),
+            simulated,
+        };
+        assert!(Entry::new(EntryParts {
+            subject,
+            ..session()
+        })
+        .is_ok());
+    }
 }
 
 #[test]
-fn a_session_with_a_type_and_a_description_a_type_alone_or_neither_is_accepted() {
-    let c172 = || Some(AircraftType::parse("C172").unwrap());
-    for (simulated_type, description) in
-        [(c172(), Some(description())), (c172(), None), (None, None)]
-    {
-        assert!(Entry::new(session_with(simulated_type, description)).is_ok());
-    }
+fn a_sole_occupant_as_co_pilot_is_refused_with_the_other_sole_occupant_refusals() {
+    let parts = EntryParts {
+        capacity: Capacity::CoPilot,
+        pilot_in_command: Some("A. Instructor".into()),
+        ..flight(true)
+    };
+    assert_eq!(
+        refused(parts),
+        [
+            EntryError::SoleOccupantWithPilotInCommand,
+            EntryError::SoleOccupantAsCoPilot
+        ]
+    );
 }
 
 #[test]

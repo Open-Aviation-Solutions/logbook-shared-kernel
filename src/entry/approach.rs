@@ -71,8 +71,9 @@ impl Approach {
 }
 
 /// Why [`Approach::new`] refused an approach. Its `Display` is plain English,
-/// for logs.
+/// for logs. Non-exhaustive: a refusal added later is not a breaking change.
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum ApproachError {
     /// An aerodrome that is not an ICAO location indicator: 4 capital
     /// letters.
