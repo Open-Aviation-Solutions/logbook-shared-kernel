@@ -131,7 +131,7 @@ impl Entry {
                 if instrument.ground.total_minutes() > 0 {
                     errors.push(EntryError::GroundTimeOnFlight);
                 }
-                instrument.flight()
+                instrument.checked_flight()
             }
             Subject::Session { .. } => {
                 if instrument.actual.total_minutes() > 0 || instrument.simulated.total_minutes() > 0
