@@ -8,8 +8,8 @@
 //! It holds, in two modules:
 //!
 //! - [`entry`]: the logbook's common entry, in the terms ICAO's Annex 1
-//!   defines, and an authority's section of it, which only that authority
-//!   reads.
+//!   defines, and an authority's section of it, which is the authority's
+//!   and holds the answers to its form, each under its question's key.
 //! - [`authority`]: the trait an authority implements to supply its rules to
 //!   the logbook, the machinery its currency checks are written over, and
 //!   the form description, in which it asks its questions about an entry.

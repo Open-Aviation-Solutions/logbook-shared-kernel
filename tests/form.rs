@@ -174,7 +174,9 @@ fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
     assert!(!choice.accepts(&json!("two")));
     assert!(Answer::YesNo.accepts(&json!(false)));
     assert!(!Answer::YesNo.accepts(&json!("false")));
-    assert!(Answer::Text.accepts(&json!("")));
+    assert!(Answer::Text.accepts(&json!("Text")));
+    assert!(!Answer::Text.accepts(&json!("")));
+    assert!(!Answer::Text.accepts(&json!("  ")));
     assert!(!Answer::Text.accepts(&json!(1)));
     assert!(Answer::Person.accepts(&json!({"name": "A. Pilot", "licence_number": "1"})));
     for person in [
@@ -266,4 +268,47 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
         assert_eq!(shown(&form, pic, Some(section)), ["first"]);
     }
     assert_eq!(shown(&form, pic, None), ["first"]);
+}
+
+#[test]
+fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
+    let form = casa_picus();
+    let entry = flight("e", PICUS);
+    let mut section = Section::new(json!({
+        "route": "operator",
+        "receiving_flight_training": false,
+        "other": 1
+    }));
+    form.retain_shown(&entry, &mut section);
+    assert_eq!(section.value(), &json!({"route": "operator", "other": 1}));
+}
+
+#[test]
+fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_answer() {
+    let form = casa_picus();
+    let entry = flight("e", PICUS);
+    let unanswered = |section: Option<Value>| -> Vec<&'static str> {
+        let section = section.map(Section::new);
+        form.unanswered(&entry, section.as_ref())
+            .into_iter()
+            .map(|question| question.key)
+            .collect()
+    };
+    assert_eq!(unanswered(None), ["route"]);
+    assert_eq!(unanswered(Some(json!({"route": "elsewhere"}))), ["route"]);
+    assert_eq!(
+        unanswered(Some(json!({"route": "instructor"}))),
+        ["receiving_flight_training"]
+    );
+    assert_eq!(
+        unanswered(Some(
+            json!({"route": "instructor", "receiving_flight_training": "no"})
+        )),
+        ["receiving_flight_training"]
+    );
+    assert!(unanswered(Some(json!({"route": "operator"}))).is_empty());
+    assert!(unanswered(Some(
+        json!({"route": "instructor", "receiving_flight_training": false})
+    ))
+    .is_empty());
 }

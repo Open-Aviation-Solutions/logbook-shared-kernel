@@ -7,7 +7,9 @@
 //!
 //! A question is shown on conditions on the entry's common part and on the
 //! answers already given, which this module evaluates, so that the host and
-//! the authority read them the same way. The rules that refuse an answer are
+//! the authority read them the same way. For the same reason it says which
+//! answers are stale ([`Form::retain_shown`]) and which required questions
+//! are unanswered ([`Form::unanswered`]). The rules that refuse an answer are
 //! the authority's [`validate_section`](super::LicensingAuthority::validate_section),
 //! in code.
 
@@ -51,6 +53,43 @@ impl Form {
         }
         shown
     }
+
+    /// Remove from `section` the answers to this form's questions that
+    /// [`Form::shown`] does not show for `entry`: an answer left from before
+    /// the pilot changed the answer that showed its question. A host calls
+    /// it before it saves a section or asks the authority to validate it, so
+    /// that the authority never reads an answer the pilot cannot see. A key
+    /// that is no question's is kept, as it is the authority's.
+    pub fn retain_shown(&self, entry: &Entry, section: &mut Section) {
+        let shown: Vec<&str> = self
+            .shown(entry, Some(section))
+            .into_iter()
+            .map(|question| question.key)
+            .collect();
+        if let Some(answers) = section.value_mut().as_object_mut() {
+            for question in &self.questions {
+                if !shown.contains(&question.key) {
+                    answers.remove(question.key);
+                }
+            }
+        }
+    }
+
+    /// The questions shown for `entry` that are required and have no
+    /// answer: their key is absent from `section`, or holds a value that the
+    /// question's [`Answer::accepts`] refuses. This is what "answered"
+    /// means, for the host and the authority alike.
+    pub fn unanswered<'a>(&'a self, entry: &Entry, section: Option<&Section>) -> Vec<&'a Question> {
+        self.shown(entry, section)
+            .into_iter()
+            .filter(|question| question.required)
+            .filter(|question| {
+                section
+                    .and_then(|section| section.value().get(question.key))
+                    .is_none_or(|answer| !question.answer.accepts(answer))
+            })
+            .collect()
+    }
 }
 
 /// One question.
@@ -77,7 +116,8 @@ pub enum Answer {
     Choice(Vec<Choice>),
     /// Stored as a boolean.
     YesNo,
-    /// Stored as a string.
+    /// Stored as a string, which is not empty or only whitespace: an empty
+    /// text is no answer, so the host stores none.
     Text,
     /// A person, stored as `{"name": ..., "licence_number": ...}`: the name
     /// a string, and required, so not empty or only whitespace; the licence
@@ -93,7 +133,7 @@ impl Answer {
                 .as_str()
                 .is_some_and(|value| choices.iter().any(|choice| choice.value == value)),
             Self::YesNo => value.is_boolean(),
-            Self::Text => value.is_string(),
+            Self::Text => value.as_str().is_some_and(|text| !text.trim().is_empty()),
             Self::Person => value.as_object().is_some_and(|person| {
                 person
                     .get("name")
