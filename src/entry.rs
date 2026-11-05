@@ -22,9 +22,10 @@ use time::Date;
 use uuid::Uuid;
 
 pub use aircraft_type_descriptions::AircraftDescription;
-pub use approach::{Approach, ApproachError, ApproachType, RnpApchMinima};
+pub use approach::{Approach, ApproachError};
 pub use authority_id::AuthorityId;
 pub use day_night::DayNight;
+pub use icao_shared_kernel::{ApproachType, RnpApchMinima};
 pub use instrument_time::InstrumentTime;
 pub use logbook::{Assessment, AssessmentId, Logbook};
 pub use route::Route;
