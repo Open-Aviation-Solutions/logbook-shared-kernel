@@ -29,9 +29,11 @@ pub struct CurrencyResult {
     /// The as-of date the check was built for.
     pub reference: Date,
     /// Entries inside the look-back window that had qualifying events, with
-    /// how many each supplied, in the order they were accepted.
+    /// how many each supplied, in the order of their ids, so that the result
+    /// does not depend on the order the entries arrived in.
     pub qualifying: Vec<Contribution>,
-    /// The same, for the checks driven by assessments rather than entries.
+    /// The same, for the checks driven by assessments rather than entries,
+    /// in the order of their ids.
     pub qualifying_assessments: Vec<AssessmentId>,
     /// Qualifying events found inside the window.
     pub found: usize,

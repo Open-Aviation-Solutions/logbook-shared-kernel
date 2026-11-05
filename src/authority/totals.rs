@@ -22,7 +22,6 @@ pub trait Measure {
 }
 
 /// Sums a [`Measure`] over the entries inside an optional date range.
-#[derive(Debug)]
 pub struct Total<M: Measure> {
     range: DateRange,
     total: u64,
@@ -40,6 +39,16 @@ impl<M: Measure> Total<M> {
 
     pub fn total(&self) -> u64 {
         self.total
+    }
+}
+
+// By hand, so that a measure need not be `Debug` itself.
+impl<M: Measure> std::fmt::Debug for Total<M> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Total")
+            .field("range", &self.range)
+            .field("total", &self.total)
+            .finish()
     }
 }
 
