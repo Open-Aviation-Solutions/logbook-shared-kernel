@@ -281,10 +281,14 @@ fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
     let mut section = Section::new(json!({
         "route": "operator",
         "receiving_flight_training": false,
-        "other": 1
+        "other": 1,
+        "version": 1
     }));
     form.retain_shown(&entry, &mut section);
-    assert_eq!(section.value(), &json!({"route": "operator", "other": 1}));
+    assert_eq!(
+        section.value(),
+        &json!({"route": "operator", "other": 1, "version": 1})
+    );
 }
 
 #[test]
@@ -328,13 +332,10 @@ fn the_forms_version_is_stored_with_the_answers_and_read_back() {
 }
 
 #[test]
-fn the_version_is_kept_when_hidden_answers_are_removed() {
-    let form = casa_picus();
-    let entry = flight("e", PICUS);
-    let mut section = Section::new(json!({"route": "operator"}));
-    form.stamp(&mut section);
-    form.retain_shown(&entry, &mut section);
-    assert_eq!(section.version(), Some(1));
+fn stamping_a_null_section_gives_it_only_the_version() {
+    let mut section = Section::new(Value::Null);
+    casa_picus().stamp(&mut section);
+    assert_eq!(section.value(), &json!({"version": 1}));
 }
 
 #[test]

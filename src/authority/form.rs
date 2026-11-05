@@ -34,13 +34,19 @@ pub struct Form {
 
 impl Form {
     /// Write this form's version into `section`, under
-    /// [`Section::VERSION_KEY`], replacing any there. A host calls it
-    /// before it saves a section or asks the authority to validate it, so
-    /// that the section says which version of the form its answers were
-    /// given to. A section that is not a JSON object is left as it is, and
-    /// so has no version.
+    /// [`Section::VERSION_KEY`], replacing any there. A host calls it last,
+    /// after the authority has validated the section as stored, and just
+    /// before it saves it, so that the authority sees a stored section's own
+    /// version (and a new section's none) and the saved section says which
+    /// version of the form its answers were given to. A section that is
+    /// `null` becomes one holding only the version; any other that is not a
+    /// JSON object is left as it is, and so has no version.
     pub fn stamp(&self, section: &mut Section) {
-        if let Some(answers) = section.value_mut().as_object_mut() {
+        let value = section.value_mut();
+        if value.is_null() {
+            *value = Value::Object(Default::default());
+        }
+        if let Some(answers) = value.as_object_mut() {
             answers.insert(Section::VERSION_KEY.into(), self.version.into());
         }
     }
@@ -77,7 +83,7 @@ impl Form {
     /// Remove from `section` the answers to this form's questions that
     /// [`Form::shown`] does not show for `entry`: an answer left from before
     /// the pilot changed the answer that showed its question. A host calls
-    /// it before it saves a section or asks the authority to validate it, so
+    /// it before it asks the authority to validate a section or saves it, so
     /// that the authority never reads an answer the pilot cannot see. A key
     /// that is no question's is kept, as it is the authority's, and so is the
     /// section's version.

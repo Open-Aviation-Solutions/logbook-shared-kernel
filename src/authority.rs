@@ -67,9 +67,13 @@ pub trait LicensingAuthority {
     /// The problems with `authority`'s section of an entry, each at a
     /// question. `authority` is one of [`authorities`], so the host knows
     /// which section each problem is in. The host has removed the answers
-    /// to hidden questions first ([`Form::retain_shown`]) and written the
-    /// form's version into the section ([`Form::stamp`]), and
+    /// to hidden questions first ([`Form::retain_shown`]), and
     /// [`Form::unanswered`] lists the required questions left unanswered.
+    /// The section's version is as it was stored ([`Section::version`]):
+    /// `None` for a section not saved yet, since the host writes the form's
+    /// version only after this, as it saves the section ([`Form::stamp`]).
+    ///
+    /// [`Section::version`]: crate::entry::Section::version
     ///
     /// [`authorities`]: LicensingAuthority::authorities
     fn validate_section(&self, authority: &AuthorityId, entry: &Entry) -> Vec<Problem>;
