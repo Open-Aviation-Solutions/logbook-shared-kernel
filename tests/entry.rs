@@ -9,7 +9,7 @@ use common::{flight_parts, session_parts};
 use icao_shared_kernel::{Aircraft, AircraftType, Capacity, FlightDuration};
 use logbook_shared_kernel::{
     AircraftDescription, Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts,
-    InstrumentTime, Subject,
+    InstrumentTime, RnpApchMinima, Subject,
 };
 use uuid::Uuid;
 
@@ -293,5 +293,24 @@ fn an_approachs_aerodrome_is_a_4_letter_icao_location_indicator() {
             Err(ApproachError::Aerodrome(aerodrome.into())),
             "{aerodrome}"
         );
+    }
+}
+
+#[test]
+fn an_approach_is_3d_when_it_has_vertical_guidance() {
+    use ApproachType::*;
+    use RnpApchMinima::*;
+    for (approach, is_3d) in [
+        (Ndb, false),
+        (Vor, false),
+        (Localizer, false),
+        (Ils, true),
+        (Gls, true),
+        (RnpApch { minima: Lnav }, false),
+        (RnpApch { minima: Lp }, false),
+        (RnpApch { minima: LnavVnav }, true),
+        (RnpApch { minima: Lpv }, true),
+    ] {
+        assert_eq!(approach.is_3d(), is_3d, "{approach:?}");
     }
 }

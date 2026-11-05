@@ -28,6 +28,6 @@ pub use authority::{
 
 pub use entry::{
     AircraftDescription, Approach, ApproachError, ApproachType, Assessment, AssessmentId,
-    AuthorityId, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook, Route,
-    Section, Subject,
+    AuthorityId, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook,
+    RnpApchMinima, Route, Section, Subject,
 };

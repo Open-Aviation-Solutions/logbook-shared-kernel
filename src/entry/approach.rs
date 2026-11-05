@@ -7,34 +7,65 @@
 use std::fmt;
 
 /// The type of instrument approach procedure (CASR 1998 reg 61.345(3)(k)),
-/// as recorded. It says what was flown, not what it counts as: whether a type
-/// is a 2D or a 3D approach is each authority's reading.
+/// as recorded, in ICAO's terms. Whether it is a 2D or a 3D approach
+/// operation (ICAO Annex 6's classes of approach operation) is derived by
+/// [`is_3d`](Self::is_3d); how an authority counts it, and which of its own
+/// items it answers (CASA's, in CASR 1998 Table 61.935), is that authority's
+/// reading.
 ///
-/// The values are pilot-logbook's, moved as they are. No ICAO text that lists
-/// types of approach procedure is quoted in these repositories; each value's
-/// words are from CASR 1998 Table 61.935, Part 4 (the approach endorsements),
-/// item by item, where the table has them. They do not yet line up with the
-/// table (`Rnp` covers both items 21 and 22, the 2D and the 3D operation):
-/// that is logbook-shared-kernel#6.
+/// There is no value for a microwave landing system (nobody flies one), nor
+/// for the DME or GNSS arrival (Table 61.935 item 20), an Australian
+/// procedure with no ICAO approach type: an authority's section records it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApproachType {
-    /// Using "an instrument landing system" (item 23).
-    Ils,
-    /// A "required navigational performance instrument approach operation"
-    /// (items 21 and 22).
-    Rnp,
-    /// Area navigation: "another kind of area navigation-based system"
-    /// (item 21).
-    Rnav,
-    /// Using "a global navigation satellite system" (items 20 and 21).
-    Gnss,
-    /// Using "a VHF omni-range/localiser navigation system" (item 19).
-    Vor,
-    /// Using "a non-directional beacon navigation system" (item 18).
+    /// A non-directional beacon approach: a 2D approach operation.
     Ndb,
-    /// A localizer approach. The table names the localiser only with the
-    /// VHF omni-range, in "VOR/LLZ" (item 19).
+    /// A VOR approach: a 2D approach operation.
+    Vor,
+    /// A localizer approach, without the glide path of an instrument landing
+    /// system: a 2D approach operation.
     Localizer,
+    /// An instrument landing system approach (Annex 10, Volume I), with
+    /// vertical guidance from the glide path: a 3D approach operation.
+    Ils,
+    /// A GBAS landing system approach (Annex 10, Volume I): a 3D approach
+    /// operation.
+    Gls,
+    /// An RNP APCH approach (Doc 9613, Performance-based Navigation Manual),
+    /// flown to the given minima.
+    RnpApch { minima: RnpApchMinima },
+}
+
+/// The minima an RNP APCH approach is flown to (Doc 9613, Performance-based
+/// Navigation Manual).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum RnpApchMinima {
+    /// LNAV minima: lateral guidance only, a 2D approach operation.
+    Lnav,
+    /// LNAV/VNAV minima: lateral guidance with barometric vertical guidance,
+    /// a 3D approach operation.
+    LnavVnav,
+    /// LP minima (localizer performance without vertical guidance): a 2D
+    /// approach operation.
+    Lp,
+    /// LPV minima (localizer performance with vertical guidance): a 3D
+    /// approach operation.
+    Lpv,
+}
+
+impl ApproachType {
+    /// Whether this is a 3D approach operation (one with lateral and vertical
+    /// guidance, Annex 6), as against a 2D one (lateral guidance only).
+    pub fn is_3d(&self) -> bool {
+        match self {
+            Self::Ndb | Self::Vor | Self::Localizer => false,
+            Self::Ils | Self::Gls => true,
+            Self::RnpApch { minima } => match minima {
+                RnpApchMinima::Lnav | RnpApchMinima::Lp => false,
+                RnpApchMinima::LnavVnav | RnpApchMinima::Lpv => true,
+            },
+        }
+    }
 }
 
 /// An instrument approach the pilot conducted, and where.
