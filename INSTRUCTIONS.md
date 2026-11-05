@@ -56,6 +56,17 @@ storage and stored formats (the application's), and any user interface.
 - **No serde derives**: the stored spelling of an entry is the app's, and a
   section is stored as the authority gives it.
 
+## Dependencies
+
+`icao-shared-kernel` and `aircraft-type-descriptions` are taken by a caret
+range, for the same reason consumers take this crate by one (below). Before
+starting work, check whether either has a newer release (`cargo search
+icao-shared-kernel --limit 1`, and the same for aircraft-type-descriptions). A
+newer patch is taken up with `cargo update -p <crate>` in the same pull
+request. A newer minor version is breaking, and is moved to first, in a pull
+request of its own, before the work; it then needs a minor release of this
+crate, as below.
+
 ## Consumers
 
 `pilot-logbook` is to depend on this crate (pilot-logbook#166), and `au-casa`
