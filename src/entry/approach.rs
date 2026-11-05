@@ -41,8 +41,8 @@ pub enum ApproachType {
 /// ended in a circling manoeuvre.
 ///
 /// `procedure` is the procedure flown; it does not say what class of operation
-/// the approach was. ICAO Annex 6 classes the operation flown, so an ILS, GLS
-/// or LPV approach that ends in a circling manoeuvre is a 2D operation. This
+/// the approach was. ICAO Annex 6 classes the operation flown, so an ILS
+/// approach that ends in a circling manoeuvre is a 2D operation. This
 /// crate derives no class of its own: an authority reads it from the procedure
 /// and `circled`.
 #[derive(Debug, Clone, PartialEq, Eq)]
