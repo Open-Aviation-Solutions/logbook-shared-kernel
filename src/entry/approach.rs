@@ -4,7 +4,7 @@
 
 //! An instrument approach the pilot conducted.
 
-use super::EntryError;
+use std::fmt;
 
 /// The type of instrument approach procedure (CASR 1998 reg 61.345(3)(k)),
 /// as recorded. It says what was flown, not what it counts as: whether a type
@@ -13,7 +13,9 @@ use super::EntryError;
 /// The values are pilot-logbook's, moved as they are. No ICAO text that lists
 /// types of approach procedure is quoted in these repositories; each value's
 /// words are from CASR 1998 Table 61.935, Part 4 (the approach endorsements),
-/// item by item, where the table has them.
+/// item by item, where the table has them. They do not yet line up with the
+/// table (`Rnp` covers both items 21 and 22, the 2D and the 3D operation):
+/// that is logbook-shared-kernel#6.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApproachType {
     /// Using "an instrument landing system" (item 23).
@@ -43,13 +45,15 @@ pub struct Approach {
 }
 
 impl Approach {
-    /// An approach at `aerodrome`, its location indicator: 3 or 4 capital
-    /// letters.
-    pub fn new(procedure: ApproachType, aerodrome: impl Into<String>) -> Result<Self, EntryError> {
+    /// An approach at `aerodrome`, given by its ICAO location indicator
+    /// (Doc 7910): 4 capital letters.
+    pub fn new(
+        procedure: ApproachType,
+        aerodrome: impl Into<String>,
+    ) -> Result<Self, ApproachError> {
         let aerodrome = aerodrome.into();
-        let length = aerodrome.chars().count();
-        if !(3..=4).contains(&length) || !aerodrome.chars().all(|c| c.is_ascii_uppercase()) {
-            return Err(EntryError::Aerodrome(aerodrome));
+        if aerodrome.len() != 4 || !aerodrome.bytes().all(|b| b.is_ascii_uppercase()) {
+            return Err(ApproachError::Aerodrome(aerodrome));
         }
         Ok(Self {
             procedure,
@@ -65,3 +69,25 @@ impl Approach {
         &self.aerodrome
     }
 }
+
+/// Why [`Approach::new`] refused an approach. Its `Display` is plain English,
+/// for logs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ApproachError {
+    /// An aerodrome that is not an ICAO location indicator: 4 capital
+    /// letters.
+    Aerodrome(String),
+}
+
+impl fmt::Display for ApproachError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Aerodrome(aerodrome) => write!(
+                f,
+                "aerodrome '{aerodrome}' must be an ICAO location indicator: 4 capital letters"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ApproachError {}

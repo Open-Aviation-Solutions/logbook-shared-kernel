@@ -2,55 +2,34 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use std::collections::BTreeMap;
+mod common;
 
+use common::{flight_parts, session_parts};
 use icao_shared_kernel::{Aircraft, Capacity, FlightDuration};
 use logbook_shared_kernel::{
-    Approach, ApproachType, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime,
-    Subject,
+    Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts, InstrumentTime, Subject,
 };
-use time::macros::date;
 use uuid::Uuid;
 
 fn minutes(minutes: i64) -> FlightDuration {
     FlightDuration::new(minutes).unwrap()
 }
 
+/// An hour's flight as pilot-in-command, the pilot its sole occupant or not.
 fn flight(sole_occupant: bool) -> EntryParts {
     EntryParts {
-        id: EntryId::new("e"),
-        date: date!(2026 - 11 - 05),
         subject: Subject::Flight {
             flight: Uuid::nil(),
             aircraft: Aircraft::create("C172", "VH", "ABC").unwrap(),
             description: None,
             sole_occupant,
         },
-        route: None,
-        flight_rules: None,
-        flight_time: minutes(60),
-        night: minutes(0),
-        capacity: Capacity::PilotInCommand,
-        pilot_in_command: None,
-        flight_crew: Vec::new(),
-        instrument: InstrumentTime::default(),
-        approaches: Vec::new(),
-        take_offs: DayNight::default(),
-        landings: DayNight::default(),
-        sections: BTreeMap::new(),
+        ..flight_parts("e", Capacity::PilotInCommand)
     }
 }
 
 fn session() -> EntryParts {
-    EntryParts {
-        subject: Subject::Session {
-            session: Uuid::nil(),
-            device: Uuid::nil(),
-            simulated_type: None,
-            description: None,
-        },
-        ..flight(false)
-    }
+    session_parts("e", Capacity::PilotInCommand)
 }
 
 fn refused(parts: EntryParts) -> Vec<EntryError> {
@@ -122,6 +101,19 @@ fn instrument_flight_time_over_the_flight_time_is_refused_and_equal_to_it_accept
 }
 
 #[test]
+fn instrument_flight_time_too_large_to_add_up_is_refused() {
+    let parts = EntryParts {
+        instrument: InstrumentTime {
+            actual: minutes(i64::MAX),
+            simulated: minutes(1),
+            ..InstrumentTime::default()
+        },
+        ..flight(false)
+    };
+    assert_eq!(refused(parts), [EntryError::InstrumentOverFlightTime]);
+}
+
+#[test]
 fn instrument_ground_time_on_a_flight_is_refused() {
     let parts = EntryParts {
         instrument: InstrumentTime {
@@ -183,17 +175,12 @@ fn every_rule_broken_is_reported() {
 }
 
 #[test]
-fn an_approachs_aerodrome_is_3_or_4_capital_letters() {
-    for aerodrome in ["YSB", "YSBK"] {
-        assert!(
-            Approach::new(ApproachType::Ils, aerodrome).is_ok(),
-            "{aerodrome}"
-        );
-    }
-    for aerodrome in ["YS", "YSBKX", "ysbk", "YS1K"] {
+fn an_approachs_aerodrome_is_a_4_letter_icao_location_indicator() {
+    assert!(Approach::new(ApproachType::Ils, "YSBK").is_ok());
+    for aerodrome in ["SYD", "YS", "YSBKX", "ysbk", "YS1K"] {
         assert_eq!(
             Approach::new(ApproachType::Ils, aerodrome),
-            Err(EntryError::Aerodrome(aerodrome.into())),
+            Err(ApproachError::Aerodrome(aerodrome.into())),
             "{aerodrome}"
         );
     }
