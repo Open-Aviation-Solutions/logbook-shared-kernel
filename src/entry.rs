@@ -22,7 +22,7 @@ use time::Date;
 use uuid::Uuid;
 
 pub use aircraft_type_descriptions::AircraftDescription;
-pub use approach::{Approach, ApproachError};
+pub use approach::Approach;
 pub use authority_id::AuthorityId;
 pub use day_night::DayNight;
 pub use icao_shared_kernel::{ApproachType, RnpApchMinima};

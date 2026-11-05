@@ -66,6 +66,8 @@ newer patch is taken up with `cargo update -p <crate>` in the same pull
 request. A newer minor version is breaking, and is moved to first, in a pull
 request of its own, before the work; it then needs a minor release of this
 crate, as below.
+When moving to a new kernel minor, check its new exports for rules this crate
+copies, and for names that clash with this crate's re-exports.
 
 ## Consumers
 

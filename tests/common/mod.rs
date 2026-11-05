@@ -16,6 +16,14 @@ use logbook_shared_kernel::{DayNight, Entry, EntryId, EntryParts, InstrumentTime
 use time::macros::date;
 use uuid::Uuid;
 
+/// A Cessna 172, VH-ABC.
+pub fn c172() -> Aircraft {
+    Aircraft::new(
+        AircraftType::parse("C172").unwrap(),
+        AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC").unwrap(),
+    )
+}
+
 /// An hour's flight, flown in `capacity`.
 pub fn flight(id: &str, capacity: Capacity) -> Entry {
     Entry::new(flight_parts(id, capacity)).unwrap()
@@ -33,10 +41,7 @@ pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
         date: date!(2026 - 11 - 05),
         subject: Subject::Flight {
             flight: Uuid::nil(),
-            aircraft: Aircraft::new(
-                AircraftType::parse("C172").unwrap(),
-                AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC").unwrap(),
-            ),
+            aircraft: c172(),
             description: None,
             sole_occupant: false,
         },
