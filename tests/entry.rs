@@ -60,6 +60,38 @@ fn a_sole_occupant_with_no_one_else_named_is_accepted() {
 }
 
 #[test]
+fn an_empty_name_is_refused_and_is_not_counted_as_a_person() {
+    for name in ["", "  "] {
+        let parts = EntryParts {
+            pilot_in_command: Some(name.into()),
+            flight_crew: vec!["A. Crew".into(), name.into()],
+            ..flight(false)
+        };
+        assert_eq!(
+            refused(parts),
+            [
+                EntryError::EmptyPilotInCommand,
+                EntryError::EmptyFlightCrewName
+            ],
+            "{name:?}"
+        );
+        let parts = EntryParts {
+            pilot_in_command: Some(name.into()),
+            flight_crew: vec![name.into()],
+            ..flight(true)
+        };
+        assert_eq!(
+            refused(parts),
+            [
+                EntryError::EmptyPilotInCommand,
+                EntryError::EmptyFlightCrewName
+            ],
+            "{name:?}"
+        );
+    }
+}
+
+#[test]
 fn others_may_be_named_when_the_pilot_was_not_the_sole_occupant() {
     let parts = EntryParts {
         pilot_in_command: Some("A. Instructor".into()),

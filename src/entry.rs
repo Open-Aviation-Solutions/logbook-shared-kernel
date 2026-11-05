@@ -108,15 +108,27 @@ impl Entry {
     /// Check the parts and build the entry, or answer every rule they break.
     pub fn new(parts: EntryParts) -> Result<Self, Vec<EntryError>> {
         let mut errors = Vec::new();
+        let blank = |name: &str| name.trim().is_empty();
+        if parts.pilot_in_command.as_deref().is_some_and(blank) {
+            errors.push(EntryError::EmptyPilotInCommand);
+        }
+        if parts.flight_crew.iter().any(|name| blank(name)) {
+            errors.push(EntryError::EmptyFlightCrewName);
+        }
+        // Only a name counts as a person: an empty one is refused above.
         if let Subject::Flight {
             sole_occupant: true,
             ..
         } = parts.subject
         {
-            if parts.pilot_in_command.is_some() {
+            if parts
+                .pilot_in_command
+                .as_deref()
+                .is_some_and(|name| !blank(name))
+            {
                 errors.push(EntryError::SoleOccupantWithPilotInCommand);
             }
-            if !parts.flight_crew.is_empty() {
+            if parts.flight_crew.iter().any(|name| !blank(name)) {
                 errors.push(EntryError::SoleOccupantWithFlightCrew);
             }
         }
@@ -228,6 +240,12 @@ impl Entry {
 /// A rule an entry's parts break. Its `Display` is plain English, for logs.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntryError {
+    /// A pilot-in-command is named, but the name is empty or only
+    /// whitespace.
+    EmptyPilotInCommand,
+    /// A member of the flight crew is named, but the name is empty or only
+    /// whitespace.
+    EmptyFlightCrewName,
     /// The pilot was the sole occupant, but a pilot-in-command is named.
     SoleOccupantWithPilotInCommand,
     /// The pilot was the sole occupant, but flight crew are named.
@@ -247,6 +265,8 @@ pub enum EntryError {
 impl fmt::Display for EntryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::EmptyPilotInCommand => f.write_str("the pilot-in-command's name is empty"),
+            Self::EmptyFlightCrewName => f.write_str("a flight crew member's name is empty"),
             Self::SoleOccupantWithPilotInCommand => {
                 f.write_str("a sole occupant's entry names a pilot-in-command")
             }

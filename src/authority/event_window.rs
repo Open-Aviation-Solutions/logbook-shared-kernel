@@ -97,10 +97,21 @@ impl EventWindow {
         }
         self.event_dates.extend(std::iter::repeat_n(on, count));
         if count > 0 && on > self.cutoff {
-            self.qualifying.push(Contribution {
-                entry: entry.clone(),
-                events: count,
-            });
+            // An entry recorded more than once is one contribution, with
+            // all its events.
+            match self
+                .qualifying
+                .iter_mut()
+                .find(|contribution| contribution.entry == *entry)
+            {
+                Some(contribution) => {
+                    contribution.events = contribution.events.saturating_add(count);
+                }
+                None => self.qualifying.push(Contribution {
+                    entry: entry.clone(),
+                    events: count,
+                }),
+            }
         }
     }
 
@@ -119,7 +130,7 @@ impl EventWindow {
     /// The check's result, from what has been recorded.
     pub fn result(&self) -> CurrencyResult {
         let mut qualifying = self.qualifying.clone();
-        qualifying.sort_by(|a, b| (&a.entry, a.events).cmp(&(&b.entry, b.events)));
+        qualifying.sort_by(|a, b| a.entry.cmp(&b.entry));
         let mut qualifying_assessments = self.qualifying_assessments.clone();
         qualifying_assessments.sort();
         CurrencyResult {
@@ -218,6 +229,23 @@ mod tests {
         let mut months = EventWindow::months(REFERENCE, u32::MAX, 1);
         months.record(&entry("a", REFERENCE), 1);
         assert_eq!(months.result().found, 1);
+    }
+
+    #[test]
+    fn an_entry_recorded_twice_is_one_contribution_with_all_its_events() {
+        let mut window = EventWindow::new(REFERENCE, 90, 3);
+        let a = entry("a", REFERENCE);
+        window.record(&a, 1);
+        window.record(&a, 2);
+        let result = window.result();
+        assert_eq!(
+            result.qualifying,
+            [Contribution {
+                entry: EntryId::new("a"),
+                events: 3
+            }]
+        );
+        assert!(result.is_current());
     }
 
     #[test]
