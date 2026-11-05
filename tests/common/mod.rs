@@ -9,7 +9,9 @@
 
 use std::collections::BTreeMap;
 
-use icao_shared_kernel::{Aircraft, Capacity, FlightDuration};
+use icao_shared_kernel::{
+    Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
+};
 use logbook_shared_kernel::{DayNight, Entry, EntryId, EntryParts, InstrumentTime, Subject};
 use time::macros::date;
 use uuid::Uuid;
@@ -31,7 +33,10 @@ pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
         date: date!(2026 - 11 - 05),
         subject: Subject::Flight {
             flight: Uuid::nil(),
-            aircraft: Aircraft::create("C172", "VH", "ABC").unwrap(),
+            aircraft: Aircraft::new(
+                AircraftType::parse("C172").unwrap(),
+                AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC").unwrap(),
+            ),
             description: None,
             sole_occupant: false,
         },
