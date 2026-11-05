@@ -14,8 +14,8 @@ pub struct DayNight<T> {
 }
 
 impl<T: Copy + Into<u64>> DayNight<T> {
-    /// Day and night together.
+    /// Day and night together, held at `u64::MAX` should the two be more.
     pub fn total(&self) -> u64 {
-        self.day.into() + self.night.into()
+        self.day.into().saturating_add(self.night.into())
     }
 }
