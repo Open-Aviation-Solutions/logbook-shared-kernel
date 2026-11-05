@@ -21,7 +21,8 @@ pub trait Measure {
     fn measure(entry: &Entry) -> u64;
 }
 
-/// Sums a [`Measure`] over the entries inside an optional date range.
+/// Sums a [`Measure`] over the entries inside an optional date range, held
+/// at `u64::MAX` should the sum be more.
 pub struct Total<M: Measure> {
     range: DateRange,
     total: u64,
@@ -55,7 +56,7 @@ impl<M: Measure> std::fmt::Debug for Total<M> {
 impl<M: Measure> EntryAccumulator for Total<M> {
     fn accept_entry(&mut self, entry: &Entry) {
         if self.range.contains(entry.date()) {
-            self.total += M::measure(entry);
+            self.total = self.total.saturating_add(M::measure(entry));
         }
     }
 }

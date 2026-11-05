@@ -42,7 +42,7 @@ pub fn count_in_window(all_event_dates: &[Date], cutoff: Date) -> usize {
 /// Last day of the Nth calendar month after the month containing `d`.
 ///
 /// The "end of the Nth month after the month in which…" a regulation can set
-/// a currency by (CASA's reg 61.880(3)(a), for one). `None` only if the
+/// a currency by. `None` only if the
 /// result is outside the representable date range.
 pub fn end_of_nth_month_after(d: Date, n: u32) -> Option<Date> {
     let total = u32::from(u8::from(d.month())).checked_add(n)?;
