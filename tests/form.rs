@@ -188,6 +188,21 @@ fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
 }
 
 #[test]
+fn a_persons_licence_number_may_be_null() {
+    assert!(Answer::Person.accepts(&json!({"name": "A. Pilot", "licence_number": null})));
+}
+
+#[test]
+fn a_persons_name_may_not_be_empty() {
+    for name in ["", "  "] {
+        assert!(
+            !Answer::Person.accepts(&json!({ "name": name })),
+            "{name:?}"
+        );
+    }
+}
+
+#[test]
 fn an_answer_to_a_hidden_question_meets_no_condition() {
     let question = |key, shown_when| Question {
         key,

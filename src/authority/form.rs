@@ -29,6 +29,8 @@ impl Form {
     /// An answer counts towards a condition only when its question is shown
     /// before the one the condition is on: an answer left in the section to
     /// a question now hidden is not given, so its follow-ups are hidden too.
+    /// This is the only way to evaluate a form's conditions, so that the host
+    /// and the authority read them the same way.
     pub fn shown<'a>(&'a self, entry: &Entry, section: Option<&Section>) -> Vec<&'a Question> {
         let mut shown: Vec<&'a Question> = Vec::new();
         for question in &self.questions {
@@ -78,7 +80,8 @@ pub enum Answer {
     /// Stored as a string.
     Text,
     /// A person, stored as `{"name": ..., "licence_number": ...}`: the name
-    /// a string, and required; the licence number a string, and optional.
+    /// a string, and required, so not empty or only whitespace; the licence
+    /// number a string, and optional (absent, or `null`).
     Person,
 }
 
@@ -92,8 +95,13 @@ impl Answer {
             Self::YesNo => value.is_boolean(),
             Self::Text => value.is_string(),
             Self::Person => value.as_object().is_some_and(|person| {
-                person.get("name").is_some_and(Value::is_string)
-                    && person.get("licence_number").is_none_or(Value::is_string)
+                person
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .is_some_and(|name| !name.trim().is_empty())
+                    && person
+                        .get("licence_number")
+                        .is_none_or(|number| number.is_string() || number.is_null())
                     && person
                         .keys()
                         .all(|key| key == "name" || key == "licence_number")
@@ -113,27 +121,24 @@ pub struct Choice {
 }
 
 /// When a question is shown.
+///
+/// A condition on an answer may refer only to a question earlier in the
+/// form: [`Form::shown`] counts only the answers to questions already shown,
+/// so a condition on a later question's key, or on a key no question has, is
+/// never met, and the question it is on is never shown. Nothing checks a
+/// form for this.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
     /// The entry's capacity is this one.
     Capacity(Capacity),
     /// The answer stored under `key` is `is`, compared as it is stored.
-    /// Through [`Form::shown`], only the answer to a question shown earlier
-    /// counts; [`Condition::is_met`] reads the section as it is.
+    /// Only the answer to a question shown earlier counts.
     Answer { key: &'static str, is: Value },
     /// Every one of these.
     All(Vec<Condition>),
 }
 
 impl Condition {
-    /// Whether the condition holds for an entry, given the answers in
-    /// `section` so far. An answer not given meets no condition on it.
-    pub fn is_met(&self, entry: &Entry, section: Option<&Section>) -> bool {
-        self.holds(entry, &|key| {
-            section.and_then(|section| section.value().get(key))
-        })
-    }
-
     /// Whether the condition holds, with `answer` giving the answer to each
     /// key, if given.
     fn holds<'s>(&self, entry: &Entry, answer: &dyn Fn(&str) -> Option<&'s Value>) -> bool {
