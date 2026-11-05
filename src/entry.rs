@@ -131,6 +131,23 @@ impl Entry {
             if parts.flight_crew.iter().any(|name| !blank(name)) {
                 errors.push(EntryError::SoleOccupantWithFlightCrew);
             }
+            // Annex 1: a co-pilot serves in a piloting capacity other than
+            // pilot-in-command, and pilot-in-command under supervision is a
+            // co-pilot acting under the pilot-in-command's supervision.
+            if matches!(
+                parts.capacity,
+                Capacity::CoPilot | Capacity::PilotInCommandUnderSupervision
+            ) {
+                errors.push(EntryError::SoleOccupantAsCoPilot);
+            }
+        }
+        if let Subject::Session {
+            simulated_type: None,
+            description: Some(_),
+            ..
+        } = parts.subject
+        {
+            errors.push(EntryError::SessionDescriptionWithoutType);
         }
         if parts.night > parts.flight_time {
             errors.push(EntryError::NightOverFlightTime);
@@ -250,6 +267,11 @@ pub enum EntryError {
     SoleOccupantWithPilotInCommand,
     /// The pilot was the sole occupant, but flight crew are named.
     SoleOccupantWithFlightCrew,
+    /// The pilot was the sole occupant, but the capacity is co-pilot or
+    /// pilot-in-command under supervision, which need another pilot on board.
+    SoleOccupantAsCoPilot,
+    /// A session describes the simulated type, but records no type.
+    SessionDescriptionWithoutType,
     /// More night than flight time.
     NightOverFlightTime,
     /// More instrument time than flight time: instrument flight time on a
@@ -272,6 +294,12 @@ impl fmt::Display for EntryError {
             }
             Self::SoleOccupantWithFlightCrew => {
                 f.write_str("a sole occupant's entry names flight crew")
+            }
+            Self::SoleOccupantAsCoPilot => f.write_str(
+                "a sole occupant cannot be a co-pilot or pilot-in-command under supervision",
+            ),
+            Self::SessionDescriptionWithoutType => {
+                f.write_str("a session describes a simulated type but records none")
             }
             Self::NightOverFlightTime => f.write_str("the night time is more than the flight time"),
             Self::InstrumentOverFlightTime => {

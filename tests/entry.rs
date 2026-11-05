@@ -4,10 +4,12 @@
 
 mod common;
 
+use aircraft_type_descriptions::{AirframeKind, EngineType};
 use common::{flight_parts, session_parts};
-use icao_shared_kernel::{Aircraft, Capacity, FlightDuration};
+use icao_shared_kernel::{Aircraft, AircraftType, Capacity, FlightDuration};
 use logbook_shared_kernel::{
-    Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts, InstrumentTime, Subject,
+    AircraftDescription, Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts,
+    InstrumentTime, Subject,
 };
 use uuid::Uuid;
 
@@ -30,6 +32,25 @@ fn flight(sole_occupant: bool) -> EntryParts {
 
 fn session() -> EntryParts {
     session_parts("e", Capacity::PilotInCommand)
+}
+
+fn description() -> AircraftDescription {
+    AircraftDescription::new(AirframeKind::LandPlane, 1, EngineType::Piston)
+}
+
+fn session_with(
+    simulated_type: Option<AircraftType>,
+    description: Option<AircraftDescription>,
+) -> EntryParts {
+    EntryParts {
+        subject: Subject::Session {
+            session: Uuid::nil(),
+            device: Uuid::nil(),
+            simulated_type,
+            description,
+        },
+        ..session()
+    }
 }
 
 fn refused(parts: EntryParts) -> Vec<EntryError> {
@@ -57,6 +78,44 @@ fn a_sole_occupant_is_refused_with_flight_crew_named() {
 #[test]
 fn a_sole_occupant_with_no_one_else_named_is_accepted() {
     assert!(Entry::new(flight(true)).is_ok());
+}
+
+#[test]
+fn a_sole_occupant_is_refused_as_co_pilot_or_pilot_in_command_under_supervision() {
+    for capacity in [Capacity::CoPilot, Capacity::PilotInCommandUnderSupervision] {
+        let parts = EntryParts {
+            capacity,
+            ..flight(true)
+        };
+        assert_eq!(refused(parts), [EntryError::SoleOccupantAsCoPilot]);
+    }
+}
+
+#[test]
+fn a_co_pilot_with_another_pilot_on_board_is_accepted() {
+    for capacity in [Capacity::CoPilot, Capacity::PilotInCommandUnderSupervision] {
+        let parts = EntryParts {
+            capacity,
+            ..flight(false)
+        };
+        assert!(Entry::new(parts).is_ok());
+    }
+}
+
+#[test]
+fn a_session_with_a_description_but_no_type_is_refused() {
+    let parts = session_with(None, Some(description()));
+    assert_eq!(refused(parts), [EntryError::SessionDescriptionWithoutType]);
+}
+
+#[test]
+fn a_session_with_a_type_and_a_description_a_type_alone_or_neither_is_accepted() {
+    let c172 = || Some(AircraftType::parse("C172").unwrap());
+    for (simulated_type, description) in
+        [(c172(), Some(description())), (c172(), None), (None, None)]
+    {
+        assert!(Entry::new(session_with(simulated_type, description)).is_ok());
+    }
 }
 
 #[test]
