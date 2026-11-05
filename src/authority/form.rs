@@ -12,6 +12,7 @@
 //! in code.
 
 use icao_shared_kernel::Capacity;
+use serde_json::Value;
 
 use crate::entry::{Entry, Section};
 
@@ -22,19 +23,31 @@ pub struct Form {
 }
 
 impl Form {
-    /// The questions shown for an entry, given the answers in `section` so
-    /// far (`None`: none yet).
-    pub fn shown<'a>(
-        &'a self,
-        entry: &'a Entry,
-        section: Option<&'a Section>,
-    ) -> impl Iterator<Item = &'a Question> + 'a {
-        self.questions.iter().filter(move |question| {
-            question
+    /// The questions shown for an entry, in order, given the answers in
+    /// `section` so far (`None`: none yet).
+    ///
+    /// An answer counts towards a condition only when its question is shown
+    /// before the one the condition is on: an answer left in the section to
+    /// a question now hidden is not given, so its follow-ups are hidden too.
+    pub fn shown<'a>(&'a self, entry: &Entry, section: Option<&Section>) -> Vec<&'a Question> {
+        let mut shown: Vec<&'a Question> = Vec::new();
+        for question in &self.questions {
+            let answer = |key: &str| {
+                shown
+                    .iter()
+                    .any(|earlier| earlier.key == key)
+                    .then(|| section.and_then(|section| section.value().get(key)))
+                    .flatten()
+            };
+            if question
                 .shown_when
                 .as_ref()
-                .is_none_or(|condition| condition.is_met(entry, section))
-        })
+                .is_none_or(|condition| condition.holds(entry, &answer))
+            {
+                shown.push(question);
+            }
+        }
+        shown
     }
 }
 
@@ -69,6 +82,26 @@ pub enum Answer {
     Person,
 }
 
+impl Answer {
+    /// Whether `value`, as stored in a section, is an answer of this kind.
+    pub fn accepts(&self, value: &Value) -> bool {
+        match self {
+            Self::Choice(choices) => value
+                .as_str()
+                .is_some_and(|value| choices.iter().any(|choice| choice.value == value)),
+            Self::YesNo => value.is_boolean(),
+            Self::Text => value.is_string(),
+            Self::Person => value.as_object().is_some_and(|person| {
+                person.get("name").is_some_and(Value::is_string)
+                    && person.get("licence_number").is_none_or(Value::is_string)
+                    && person
+                        .keys()
+                        .all(|key| key == "name" || key == "licence_number")
+            }),
+        }
+    }
+}
+
 /// One choice of a [`Answer::Choice`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Choice {
@@ -85,10 +118,9 @@ pub enum Condition {
     /// The entry's capacity is this one.
     Capacity(Capacity),
     /// The answer stored under `key` is `is`, compared as it is stored.
-    Answer {
-        key: &'static str,
-        is: serde_json::Value,
-    },
+    /// Through [`Form::shown`], only the answer to a question shown earlier
+    /// counts; [`Condition::is_met`] reads the section as it is.
+    Answer { key: &'static str, is: Value },
     /// Every one of these.
     All(Vec<Condition>),
 }
@@ -97,14 +129,20 @@ impl Condition {
     /// Whether the condition holds for an entry, given the answers in
     /// `section` so far. An answer not given meets no condition on it.
     pub fn is_met(&self, entry: &Entry, section: Option<&Section>) -> bool {
+        self.holds(entry, &|key| {
+            section.and_then(|section| section.value().get(key))
+        })
+    }
+
+    /// Whether the condition holds, with `answer` giving the answer to each
+    /// key, if given.
+    fn holds<'s>(&self, entry: &Entry, answer: &dyn Fn(&str) -> Option<&'s Value>) -> bool {
         match self {
             Self::Capacity(capacity) => entry.capacity() == *capacity,
-            Self::Answer { key, is } => {
-                section.and_then(|section| section.value().get(key)) == Some(is)
-            }
+            Self::Answer { key, is } => answer(key) == Some(is),
             Self::All(conditions) => conditions
                 .iter()
-                .all(|condition| condition.is_met(entry, section)),
+                .all(|condition| condition.holds(entry, answer)),
         }
     }
 }

@@ -13,8 +13,9 @@ use logbook_shared_kernel::{Answer, Choice, Condition, Form, Question, Section};
 use serde_json::{json, Value};
 
 /// CASA's pilot in command under supervision (CASR 1998 reg 61.095), as the
-/// ADR describes its section. The labels of the questions themselves are not
-/// the ADR's, and are not asserted.
+/// ADR describes its section. The ADR gives the choices' labels; the
+/// questions' are words of reg 61.095(2)(b) and (3)(b). No label is
+/// asserted.
 fn casa_picus() -> Form {
     let picus = || {
         Some(Condition::Capacity(
@@ -25,7 +26,7 @@ fn casa_picus() -> Form {
         questions: vec![
             Question {
                 key: "route",
-                label: "Method of supervision".into(),
+                label: "The supervision of the person".into(),
                 regulation: "61.095(1)(c)",
                 answer: Answer::Choice(vec![
                     Choice {
@@ -87,6 +88,7 @@ fn shown(form: &Form, capacity: Capacity, section: Option<Value>) -> Vec<&'stati
     let entry = flight("e", capacity);
     let section = section.map(Section::new);
     form.shown(&entry, section.as_ref())
+        .into_iter()
         .map(|question| question.key)
         .collect()
 }
@@ -119,10 +121,24 @@ fn casas_form_asks_about_flight_training_only_on_the_instructor_route() {
 fn the_adrs_section_answers_every_question_casa_shows() {
     let section = json!({"route": "instructor", "receiving_flight_training": false});
     let form = casa_picus();
-    let keys = shown(&form, PICUS, Some(section.clone()));
-    assert_eq!(keys.len(), 2);
-    for key in keys {
-        assert!(section.get(key).is_some(), "{key}");
+    assert_answers_every_question_shown(&form, PICUS, &section, 2);
+}
+
+/// Each question shown, `count` of them, has an answer of its kind in
+/// `section`.
+fn assert_answers_every_question_shown(
+    form: &Form,
+    capacity: Capacity,
+    section: &Value,
+    count: usize,
+) {
+    let entry = flight("e", capacity);
+    let section = Section::new(section.clone());
+    let questions = form.shown(&entry, Some(&section));
+    assert_eq!(questions.len(), count);
+    for question in questions {
+        let answer = &section.value()[question.key];
+        assert!(question.answer.accepts(answer), "{}", question.key);
     }
 }
 
@@ -139,6 +155,66 @@ fn easas_form_is_shown_only_for_pilot_in_command_under_supervision() {
         );
     }
     assert_eq!(shown(&easa_picus(), PICUS, None), ["countersigned_by"]);
+}
+
+#[test]
+fn a_person_named_answers_easas_question() {
+    let section = json!({"countersigned_by": {"name": "A. Pilot"}});
+    assert_answers_every_question_shown(&easa_picus(), PICUS, &section, 1);
+}
+
+#[test]
+fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
+    let choice = Answer::Choice(vec![Choice {
+        value: "one",
+        label: "One".into(),
+        regulation: "",
+    }]);
+    assert!(choice.accepts(&json!("one")));
+    assert!(!choice.accepts(&json!("two")));
+    assert!(Answer::YesNo.accepts(&json!(false)));
+    assert!(!Answer::YesNo.accepts(&json!("false")));
+    assert!(Answer::Text.accepts(&json!("")));
+    assert!(!Answer::Text.accepts(&json!(1)));
+    assert!(Answer::Person.accepts(&json!({"name": "A. Pilot", "licence_number": "1"})));
+    for person in [
+        json!("A. Pilot"),
+        json!({"licence_number": "1"}),
+        json!({"name": "A. Pilot", "licence_number": 1}),
+        json!({"name": "A. Pilot", "signature": "A. P."}),
+    ] {
+        assert!(!Answer::Person.accepts(&person), "{person}");
+    }
+}
+
+#[test]
+fn an_answer_to_a_hidden_question_meets_no_condition() {
+    let question = |key, shown_when| Question {
+        key,
+        label: key.into(),
+        regulation: "",
+        answer: Answer::YesNo,
+        shown_when: Some(shown_when),
+        required: true,
+    };
+    let form = Form {
+        questions: vec![
+            question("first", Condition::Capacity(Capacity::PilotInCommand)),
+            question(
+                "second",
+                Condition::Answer {
+                    key: "first",
+                    is: json!(true),
+                },
+            ),
+        ],
+    };
+    let section = Some(json!({"first": true}));
+    assert_eq!(
+        shown(&form, Capacity::PilotInCommand, section.clone()),
+        ["first", "second"]
+    );
+    assert!(shown(&form, PICUS, section).is_empty());
 }
 
 #[test]

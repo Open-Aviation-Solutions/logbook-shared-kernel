@@ -4,6 +4,8 @@
 
 mod common;
 
+use std::cell::Cell;
+
 use common::{flight, session};
 use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
@@ -14,15 +16,19 @@ use logbook_shared_kernel::{
 use time::Date;
 
 /// An authority with no State's rules, whose only rule is that a session
-/// does not count.
-struct FlightsOnly(Vec<AuthorityId>);
+/// does not count. It counts how often it is asked.
+struct FlightsOnly {
+    authorities: Vec<AuthorityId>,
+    asked: Cell<usize>,
+}
 
 impl LicensingAuthority for FlightsOnly {
     fn authorities(&self) -> &[AuthorityId] {
-        &self.0
+        &self.authorities
     }
 
     fn counts(&self, entry: &Entry) -> bool {
+        self.asked.set(self.asked.get() + 1);
         matches!(entry.subject(), Subject::Flight { .. })
     }
 
@@ -42,13 +48,13 @@ impl LicensingAuthority for FlightsOnly {
         Vec::new()
     }
 
-    fn section_form(&self, _: &Entry) -> Form {
+    fn section_form(&self, _: &AuthorityId, _: &Entry) -> Form {
         Form {
             questions: Vec::new(),
         }
     }
 
-    fn validate_section(&self, _: &Entry) -> Vec<Problem> {
+    fn validate_section(&self, _: &AuthorityId, _: &Entry) -> Vec<Problem> {
         Vec::new()
     }
 }
@@ -72,8 +78,15 @@ impl Measure for PicTime {
     }
 }
 
+fn flights_only() -> FlightsOnly {
+    FlightsOnly {
+        authorities: vec![AuthorityId::new("XX", "TEST").unwrap()],
+        asked: Cell::new(0),
+    }
+}
+
 fn authority() -> Box<dyn LicensingAuthority> {
-    Box::new(FlightsOnly(vec![AuthorityId::new("XX", "TEST").unwrap()]))
+    Box::new(flights_only())
 }
 
 #[test]
@@ -98,12 +111,13 @@ fn one_entry_reaches_every_accumulator_given_it() {
 
 #[test]
 fn what_the_authority_does_not_count_reaches_no_accumulator_and_only_that() {
-    // Checked against two accumulators at once: the gate runs once, outside
-    // the loop over the accumulators.
+    // Checked against two accumulators at once, and the gate is asked once
+    // for each entry, not once for each accumulator.
+    let authority = flights_only();
     let mut total = Total::<FlightTime>::new(DateRange::default());
     let mut pic = Total::<PicTime>::new(DateRange::default());
     run(
-        authority().as_ref(),
+        &authority,
         &[
             session("s", Capacity::PilotInCommand),
             flight("f", Capacity::DualInstruction),
@@ -114,4 +128,5 @@ fn what_the_authority_does_not_count_reaches_no_accumulator_and_only_that() {
         ],
     );
     assert_eq!((total.total(), pic.total()), (60, 0));
+    assert_eq!(authority.asked.get(), 2);
 }

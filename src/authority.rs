@@ -58,13 +58,18 @@ pub trait LicensingAuthority {
     /// The authority's own totals of the entries dated in `range`.
     fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<Figure>;
 
-    /// The questions the authority asks about an entry, given its common
-    /// part.
-    fn section_form(&self, entry: &Entry) -> Form;
+    /// The questions `authority`, one of [`authorities`], asks about an
+    /// entry for its section, given the entry's common part.
+    ///
+    /// [`authorities`]: LicensingAuthority::authorities
+    fn section_form(&self, authority: &AuthorityId, entry: &Entry) -> Form;
 
-    /// The problems with the authority's section of an entry, each at a
-    /// question.
-    fn validate_section(&self, entry: &Entry) -> Vec<Problem>;
+    /// The problems with `authority`'s section of an entry, each at a
+    /// question. `authority` is one of [`authorities`], so the host knows
+    /// which section each problem is in.
+    ///
+    /// [`authorities`]: LicensingAuthority::authorities
+    fn validate_section(&self, authority: &AuthorityId, entry: &Entry) -> Vec<Problem>;
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation
