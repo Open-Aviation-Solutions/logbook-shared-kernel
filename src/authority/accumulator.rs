@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! The accumulator abstractions, and the single-pass runner for
-//! assessments.
+//! The accumulator abstractions and the single-pass runners.
 
+use super::LicensingAuthority;
 use crate::entry::{Assessment, Entry};
 
 /// Anything that folds logbook entries into a result.
@@ -16,6 +16,29 @@ use crate::entry::{Assessment, Entry};
 /// dates sort or count them rather than relying on arrival order.
 pub trait EntryAccumulator {
     fn accept_entry(&mut self, entry: &Entry);
+}
+
+/// Dispatch each entry that counts under an authority's rules to every
+/// accumulator, in a single pass.
+///
+/// This is the one place the authority's [`counts`] is applied: an entry it
+/// refuses is dropped here, so no accumulator guards against it, and it
+/// reaches no check or total either.
+///
+/// [`counts`]: LicensingAuthority::counts
+pub fn run<'a, A: LicensingAuthority + ?Sized>(
+    authority: &A,
+    entries: impl IntoIterator<Item = &'a Entry>,
+    accumulators: &mut [&mut dyn EntryAccumulator],
+) {
+    for entry in entries {
+        if !authority.counts(entry) {
+            continue;
+        }
+        for accumulator in accumulators.iter_mut() {
+            accumulator.accept_entry(entry);
+        }
+    }
 }
 
 /// Anything that folds assessments into a result.

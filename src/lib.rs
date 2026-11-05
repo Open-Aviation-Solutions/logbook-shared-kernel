@@ -5,7 +5,7 @@
 //! The logbook's shared kernel: the part of a pilot's logbook that the
 //! logbook and each licensing authority's rules agree on.
 //!
-//! It is to hold, in two modules:
+//! It holds, in two modules:
 //!
 //! - [`entry`]: the logbook's common entry, in the terms ICAO's Annex 1
 //!   defines, and an authority's section of it, which only that authority
@@ -14,16 +14,16 @@
 //!   the logbook, the machinery its currency checks are written over, and
 //!   the form description, in which it asks its questions about an entry.
 //!
-//! `authority` holds the machinery so far; the trait and the form
-//! description follow before the first release, 0.1.0 (issue #1). The design
-//! is recorded in pilot-logbook's ADR 0001.
+//! The design is recorded in pilot-logbook's ADR 0001.
 
 pub mod authority;
 pub mod entry;
 
 pub use authority::{
-    run_assessments, AssessmentAccumulator, AssessmentCurrencyCheck, Contribution, CurrencyCheck,
-    CurrencyResult, DateRange, EntryAccumulator, EventWindow, Measure, Total,
+    run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
+    Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
+    EntryAccumulator, EventWindow, Figure, Form, LicensingAuthority, Measure, Problem, ProblemKind,
+    Question, Requirement, RequirementId, Total,
 };
 
 pub use entry::{
