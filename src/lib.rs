@@ -7,13 +7,20 @@
 //!
 //! It is to hold, in two modules:
 //!
-//! - `entry`: the logbook's common entry, in the terms ICAO's Annex 1
+//! - [`entry`]: the logbook's common entry, in the terms ICAO's Annex 1
 //!   defines, and an authority's section of it, which only that authority
 //!   reads.
 //! - `authority`: the trait an authority implements to supply its rules to
 //!   the logbook, the machinery its currency checks are written over, and
 //!   the form description, in which it asks its questions about an entry.
 //!
-//! Neither is written yet. The repository is set up first, and both are
-//! written before the first release, 0.1.0 (issue #1). The design is recorded
-//! in pilot-logbook's ADR 0001.
+//! `authority` is not written yet: it follows `entry` before the first
+//! release, 0.1.0 (issue #1). The design is recorded in pilot-logbook's
+//! ADR 0001.
+
+pub mod entry;
+
+pub use entry::{
+    AircraftDescription, Approach, ApproachType, Assessment, AssessmentId, AuthorityId, DayNight,
+    Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook, Route, Section, Subject,
+};

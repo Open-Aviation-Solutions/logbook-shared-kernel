@@ -15,3 +15,13 @@ include = ["/src", "/tests", "/README.md", "/LICENSE"]
 [lib]
 name = "logbook_shared_kernel"
 path = "src/lib.rs"
+
+[dependencies]
+icao-shared-kernel = "^0.2.0"
+aircraft-type-descriptions = "^0.1.1"
+time = "0.3"
+uuid = "1"
+serde_json = "1"
+
+[dev-dependencies]
+time = { version = "0.3", features = ["macros"] }
