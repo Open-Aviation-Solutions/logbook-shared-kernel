@@ -20,20 +20,21 @@ pilot-logbook's
 
 ## Status
 
-Not yet released, and not yet written: the repository is set up, and the crate
-itself follows in [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/1).
-Its first release is to be `0.1.0`. Until `1.0` a breaking release is a minor
-version, so take it by a caret range, as
+Written, and not yet released: its first release is to be `0.1.0`. Until `1.0`
+a breaking release is a minor version, so take it by a caret range, as
 [`INSTRUCTIONS.md`, "Consumers"](INSTRUCTIONS.md#consumers) sets out.
 
-What it is to hold, in two modules:
+What it holds, in two modules:
 
 - **`entry`**: the logbook's common entry, in ICAO's terms (the date, the
   aircraft or the flight simulation training device, the route, the flight
   rules, the flight time and night, the capacity in which the pilot flew,
   instrument time, approaches, take-offs and landings); an authority's section of it, which
-  only that authority reads; and the neutral description of an aircraft type
-  that an authority classifies.
+  is the authority's and holds the answers to its form, each under its
+  question's key; and the neutral description of an aircraft type
+  that an authority classifies, which is
+  [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,
+  re-exported.
 - **`authority`**: the trait an authority implements (whether an entry counts
   under its rules, what an aircraft type counts as, its requirements and
   their currency, the questions it asks about an entry and the problems with
@@ -41,11 +42,11 @@ What it is to hold, in two modules:
   form description, in which it asks those questions as data for the host to
   show.
 
-What it is not to hold:
+What it does not hold:
 
 - Any one State's rules. CASA's are in au-casa; ICAO's terms themselves are
   in [icao-shared-kernel](https://github.com/Open-Aviation-Solutions/icao-shared-kernel),
-  which this crate is to depend on.
+  which this crate depends on.
 - Storage: no repositories, databases or file formats. How an entry is
   stored is the application's.
 - A user interface. The form description says what to ask, not how to show

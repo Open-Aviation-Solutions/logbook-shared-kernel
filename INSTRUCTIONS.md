@@ -10,12 +10,13 @@ read it before changing what the crate holds.
 
 ## Purpose and scope
 
-The crate is to hold, in one crate and two modules (split only if something
+The crate holds, in one crate and two modules (split only if something
 wants the records without the interface):
 
 - **`entry`**: the logbook's common entry, the pilot's claim in ICAO's terms
   (taken from `icao-shared-kernel`); an authority's section of it, stored as
-  the authority gives it and read only by that authority; and the neutral
+  the authority gives it, holding the answers to its form under each
+  question's key (which the form reads to decide what is shown); and the neutral
   description of an aircraft type.
 - **`authority`**: the trait an authority implements to supply its rules; the
   accumulator and check traits, the event window and `CurrencyResult`, so
@@ -23,10 +24,10 @@ wants the records without the interface):
   form description, in which an authority asks its questions about an entry
   as data, with no dependence on a user interface.
 
-Neither is written yet: the repository is set up first, and the crate follows
-in [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/1),
-from a plan agreed on that issue. `src/lib.rs` holds only the crate's doc
-comment until then.
+The neutral description of an aircraft type is `aircraft-type-descriptions`'s
+`AircraftDescription`, re-exported from `entry`; this crate defines none of
+its own. The plan the crate was written from, and the owner's decisions on
+it, are on [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/1).
 
 Out of scope (do not add here): any one State's rules, names or regulations
 (CASA's are au-casa's), ICAO's terms themselves (`icao-shared-kernel`'s),
@@ -45,11 +46,20 @@ storage and stored formats (the application's), and any user interface.
   fails on a Rust, TOML or YAML file with no licence header, though it does not
   check that the header is the MPL's wording. It does not check the
   `Makefile`, which it does not recognise.
+- **Module layout** is `icao-shared-kernel`'s: a module file (`entry.rs`,
+  `authority.rs`) with a sibling directory of the same name holding its
+  parts, and `lib.rs` re-exporting the public types so the API is flat.
+- **An entry holds its rules**: `Entry` is built only through `Entry::new`,
+  which answers every rule its parts break. The rules are the common part's
+  own (ADR 0001's, and those agreed on #1); a rule of one State's, or of how
+  the app records names, stays out.
+- **No serde derives**: the stored spelling of an entry is the app's, and a
+  section is stored as the authority gives it.
 
 ## Consumers
 
-`pilot-logbook` is to depend on this crate, and `au-casa` to implement its
-trait.
+`pilot-logbook` is to depend on this crate (pilot-logbook#166), and `au-casa`
+to implement its trait (au-casa#29).
 
 Choose the best API, not the compatible one: while the crate is on `0.x`, a
 breaking change is fine, landed with a matching PR in each consumer.

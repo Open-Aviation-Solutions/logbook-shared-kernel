@@ -5,15 +5,29 @@
 //! The logbook's shared kernel: the part of a pilot's logbook that the
 //! logbook and each licensing authority's rules agree on.
 //!
-//! It is to hold, in two modules:
+//! It holds, in two modules:
 //!
-//! - `entry`: the logbook's common entry, in the terms ICAO's Annex 1
-//!   defines, and an authority's section of it, which only that authority
-//!   reads.
-//! - `authority`: the trait an authority implements to supply its rules to
+//! - [`entry`]: the logbook's common entry, in the terms ICAO's Annex 1
+//!   defines, and an authority's section of it, which is the authority's
+//!   and holds the answers to its form, each under its question's key.
+//! - [`authority`]: the trait an authority implements to supply its rules to
 //!   the logbook, the machinery its currency checks are written over, and
 //!   the form description, in which it asks its questions about an entry.
 //!
-//! Neither is written yet. The repository is set up first, and both are
-//! written before the first release, 0.1.0 (issue #1). The design is recorded
-//! in pilot-logbook's ADR 0001.
+//! The design is recorded in pilot-logbook's ADR 0001.
+
+pub mod authority;
+pub mod entry;
+
+pub use authority::{
+    run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
+    Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
+    EntryAccumulator, EventWindow, Figure, Form, LicensingAuthority, Measure, Problem, ProblemKind,
+    Question, Requirement, RequirementId, Total,
+};
+
+pub use entry::{
+    AircraftDescription, Approach, ApproachError, ApproachType, Assessment, AssessmentId,
+    AuthorityId, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook, Route,
+    Section, Subject,
+};
