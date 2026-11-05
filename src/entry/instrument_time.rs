@@ -42,9 +42,20 @@ impl Default for InstrumentTime {
 }
 
 impl InstrumentTime {
-    /// Instrument flight time: actual and simulated together. `None` when
-    /// the sum is more than a [`FlightDuration`] can hold.
-    pub fn flight(&self) -> Option<FlightDuration> {
+    /// Instrument flight time: actual and simulated together. An entry's
+    /// sum always fits, since [`Entry::new`](crate::entry::Entry::new)
+    /// refuses one that does not; outside an entry, a sum more than a
+    /// [`FlightDuration`] can hold is held at the most it can.
+    pub fn flight(&self) -> FlightDuration {
+        let minutes = self
+            .actual
+            .total_minutes()
+            .saturating_add(self.simulated.total_minutes());
+        FlightDuration::new(minutes).expect("two durations sum to one that is not negative")
+    }
+
+    /// The sum, or `None` when it is more than a [`FlightDuration`] can hold.
+    pub(crate) fn checked_flight(&self) -> Option<FlightDuration> {
         let minutes = self
             .actual
             .total_minutes()
