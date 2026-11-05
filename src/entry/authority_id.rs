@@ -6,31 +6,27 @@
 
 use std::fmt;
 
-use icao_shared_kernel::{Licence, ValidationError};
+use icao_shared_kernel::{IssuingState, Licence, ValidationError};
 
 /// A licensing authority: the State and the authority's code together, as a
 /// licence's `issuing_state` and `issuing_authority` are, written
 /// `AU-CASA`. The code alone is not unique across States: the United
 /// Kingdom and New Zealand each have a "CAA". It keys an entry's sections.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AuthorityId {
-    state: String,
+    state: IssuingState,
     authority: String,
 }
 
 impl AuthorityId {
-    /// Refuses what [`Licence::new`] refuses of these two parts: a State
-    /// that is not two capital letters (an ISO 3166-1 alpha-2 code, by
-    /// shape), and an empty authority.
+    /// Refuses a State that [`IssuingState::parse`] refuses, and an empty
+    /// authority.
     pub fn new(
         state: impl Into<String>,
         authority: impl Into<String>,
     ) -> Result<Self, ValidationError> {
-        let state = state.into();
+        let state = IssuingState::parse(state)?;
         let authority = authority.into();
-        if state.len() != 2 || !state.bytes().all(|b| b.is_ascii_uppercase()) {
-            return Err(ValidationError::IssuingState(state));
-        }
         if authority.is_empty() {
             return Err(ValidationError::Empty {
                 field: "issuing_authority",
@@ -42,13 +38,13 @@ impl AuthorityId {
     /// The authority that issued a licence.
     pub fn of(licence: &Licence) -> Self {
         Self {
-            state: licence.issuing_state().to_owned(),
+            state: licence.issuing_state().clone(),
             authority: licence.issuing_authority().to_owned(),
         }
     }
 
     pub fn state(&self) -> &str {
-        &self.state
+        self.state.as_str()
     }
 
     pub fn authority(&self) -> &str {
@@ -56,8 +52,22 @@ impl AuthorityId {
     }
 }
 
+// Ordered by the key's spelling, as `AU-CASA`'s parts: `IssuingState` is not
+// `Ord`.
+impl PartialOrd for AuthorityId {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for AuthorityId {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        (self.state.as_str(), &self.authority).cmp(&(other.state.as_str(), &other.authority))
+    }
+}
+
 impl fmt::Display for AuthorityId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}-{}", self.state, self.authority)
+        write!(f, "{}-{}", self.state.as_str(), self.authority)
     }
 }
