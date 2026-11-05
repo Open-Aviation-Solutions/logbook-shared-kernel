@@ -67,7 +67,8 @@ pub trait LicensingAuthority {
     /// The problems with `authority`'s section of an entry, each at a
     /// question. `authority` is one of [`authorities`], so the host knows
     /// which section each problem is in. The host has removed the answers
-    /// to hidden questions first ([`Form::retain_shown`]), and
+    /// to hidden questions first ([`Form::retain_shown`]) and written the
+    /// form's version into the section ([`Form::stamp`]), and
     /// [`Form::unanswered`] lists the required questions left unanswered.
     ///
     /// [`authorities`]: LicensingAuthority::authorities

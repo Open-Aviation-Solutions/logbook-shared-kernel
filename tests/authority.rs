@@ -50,6 +50,7 @@ impl LicensingAuthority for FlightsOnly {
 
     fn section_form(&self, _: &AuthorityId, _: &Entry) -> Form {
         Form {
+            version: 1,
             questions: Vec::new(),
         }
     }

@@ -23,6 +23,7 @@ fn casa_picus() -> Form {
         ))
     };
     Form {
+        version: 1,
         questions: vec![
             Question {
                 key: "route",
@@ -70,6 +71,7 @@ fn casa_picus() -> Form {
 /// written only to test the description, and not built.
 fn easa_picus() -> Form {
     Form {
+        version: 1,
         questions: vec![Question {
             key: "countersigned_by",
             label: "Countersigned by the PIC".into(),
@@ -215,6 +217,7 @@ fn an_answer_to_a_hidden_question_meets_no_condition() {
         required: true,
     };
     let form = Form {
+        version: 1,
         questions: vec![
             question("first", Condition::Capacity(Capacity::PilotInCommand)),
             question(
@@ -237,6 +240,7 @@ fn an_answer_to_a_hidden_question_meets_no_condition() {
 #[test]
 fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
     let form = Form {
+        version: 1,
         questions: vec![
             Question {
                 key: "first",
@@ -311,4 +315,38 @@ fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_ans
         json!({"route": "instructor", "receiving_flight_training": false})
     ))
     .is_empty());
+}
+
+#[test]
+fn the_forms_version_is_stored_with_the_answers_and_read_back() {
+    let mut form = casa_picus();
+    form.version = 2;
+    let mut section = Section::new(json!({"route": "operator", "version": 1}));
+    form.stamp(&mut section);
+    assert_eq!(section.value(), &json!({"route": "operator", "version": 2}));
+    assert_eq!(section.version(), Some(2));
+}
+
+#[test]
+fn the_version_is_kept_when_hidden_answers_are_removed() {
+    let form = casa_picus();
+    let entry = flight("e", PICUS);
+    let mut section = Section::new(json!({"route": "operator"}));
+    form.stamp(&mut section);
+    form.retain_shown(&entry, &mut section);
+    assert_eq!(section.version(), Some(1));
+}
+
+#[test]
+fn a_section_without_a_whole_number_under_the_key_has_no_version() {
+    for value in [
+        json!({}),
+        json!({"version": "1"}),
+        json!({"version": 1.5}),
+        json!({"version": -1}),
+        json!({"version": u64::from(u32::MAX) + 1}),
+        json!([1]),
+    ] {
+        assert_eq!(Section::new(value.clone()).version(), None, "{value}");
+    }
 }

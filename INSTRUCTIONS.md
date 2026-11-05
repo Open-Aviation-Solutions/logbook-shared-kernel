@@ -16,7 +16,9 @@ wants the records without the interface):
 - **`entry`**: the logbook's common entry, the pilot's claim in ICAO's terms
   (taken from `icao-shared-kernel`); an authority's section of it, stored as
   the authority gives it, holding the answers to its form under each
-  question's key (which the form reads to decide what is shown); and the neutral
+  question's key (which the form reads to decide what is shown), and the
+  form's version under the reserved key `version` (`Section::VERSION_KEY`),
+  which no question may use; and the neutral
   description of an aircraft type.
 - **`authority`**: the trait an authority implements to supply its rules; the
   accumulator and check traits, the event window and `CurrencyResult`, so
