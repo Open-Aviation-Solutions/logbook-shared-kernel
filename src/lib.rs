@@ -21,6 +21,7 @@
 pub mod entry;
 
 pub use entry::{
-    AircraftDescription, Approach, ApproachType, Assessment, AssessmentId, AuthorityId, DayNight,
-    Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook, Route, Section, Subject,
+    AircraftDescription, Approach, ApproachError, ApproachType, Assessment, AssessmentId,
+    AuthorityId, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime, Logbook, Route,
+    Section, Subject,
 };
