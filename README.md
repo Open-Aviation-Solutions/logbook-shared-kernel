@@ -20,7 +20,7 @@ pilot-logbook's
 
 ## Status
 
-Written, and not yet released: its first release is to be `0.1.0`. Until `1.0`
+Written; the current release is `0.2.0`. Until `1.0`
 a breaking release is a minor version, so take it by a caret range, as
 [`INSTRUCTIONS.md`, "Consumers"](INSTRUCTIONS.md#consumers) sets out.
 

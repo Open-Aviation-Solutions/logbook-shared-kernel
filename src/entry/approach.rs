@@ -6,16 +6,17 @@
 
 use std::fmt;
 
-/// The type of instrument approach procedure (CASR 1998 reg 61.345(3)(k)),
-/// as recorded, in ICAO's terms. Whether it is a 2D or a 3D approach
-/// operation (ICAO Annex 6's classes of approach operation) is derived by
-/// [`is_3d`](Self::is_3d); how an authority counts it, and which of its own
-/// items it answers (CASA's, in CASR 1998 Table 61.935), is that authority's
-/// reading.
+/// The type of instrument approach procedure, as recorded, in ICAO's terms.
+/// Whether it is a 2D or a 3D approach operation (the classes of approach
+/// operation in ICAO Annex 6) is derived by [`is_3d`](Self::is_3d); how an
+/// authority counts it is that authority's reading.
 ///
-/// There is no value for a microwave landing system (nobody flies one), nor
-/// for the DME or GNSS arrival (Table 61.935 item 20), an Australian
-/// procedure with no ICAO approach type: an authority's section records it.
+/// A procedure particular to one State is recorded in that authority's
+/// section, not here. There is no `Mls` value until one is needed.
+///
+/// Not `#[non_exhaustive]`, deliberately: an authority mapping approaches to
+/// its rules should be made to handle each new value, not fall into a
+/// wildcard.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ApproachType {
     /// A non-directional beacon approach: a 2D approach operation.
@@ -31,40 +32,47 @@ pub enum ApproachType {
     /// A GBAS landing system approach (Annex 10, Volume I): a 3D approach
     /// operation.
     Gls,
-    /// An RNP APCH approach (Doc 9613, Performance-based Navigation Manual),
-    /// flown to the given minima.
+    /// An RNP APCH approach (Doc 9613, the Performance-based Navigation
+    /// Manual), flown to the given minima.
     RnpApch { minima: RnpApchMinima },
 }
 
-/// The minima an RNP APCH approach is flown to (Doc 9613, Performance-based
-/// Navigation Manual).
+/// The minima an RNP APCH approach is flown to (Doc 9613, the
+/// Performance-based Navigation Manual).
+///
+/// Not `#[non_exhaustive]`, deliberately, for the reason `ApproachType` is
+/// not.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum RnpApchMinima {
     /// LNAV minima: lateral guidance only, a 2D approach operation.
     Lnav,
-    /// LNAV/VNAV minima: lateral guidance with barometric vertical guidance,
-    /// a 3D approach operation.
+    /// LNAV/VNAV minima: lateral and vertical guidance, a 3D approach
+    /// operation.
     LnavVnav,
-    /// LP minima (localizer performance without vertical guidance): a 2D
+    /// LP minima ("localizer performance"): a 2D
     /// approach operation.
     Lp,
-    /// LPV minima (localizer performance with vertical guidance): a 3D
+    /// LPV minima ("localizer performance with vertical guidance"): a 3D
     /// approach operation.
     Lpv,
 }
 
 impl ApproachType {
-    /// Whether this is a 3D approach operation (one with lateral and vertical
+    /// Whether this is a 3D approach operation (lateral and vertical
     /// guidance, Annex 6), as against a 2D one (lateral guidance only).
-    pub fn is_3d(&self) -> bool {
+    pub fn is_3d(self) -> bool {
         match self {
             Self::Ndb | Self::Vor | Self::Localizer => false,
             Self::Ils | Self::Gls => true,
-            Self::RnpApch { minima } => match minima {
-                RnpApchMinima::Lnav | RnpApchMinima::Lp => false,
-                RnpApchMinima::LnavVnav | RnpApchMinima::Lpv => true,
-            },
+            Self::RnpApch { minima } => minima.is_3d(),
         }
+    }
+}
+
+impl RnpApchMinima {
+    /// Whether these minima make the approach a 3D approach operation.
+    pub fn is_3d(self) -> bool {
+        matches!(self, Self::LnavVnav | Self::Lpv)
     }
 }
 
