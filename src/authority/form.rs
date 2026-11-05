@@ -123,6 +123,10 @@ pub enum Answer {
     /// a string, and required, so not empty or only whitespace; the licence
     /// number a string, and optional (absent, or `null`).
     Person,
+    /// A non-negative whole number, stored as a plain JSON number (`0`,
+    /// `3`): a negative or fractional number, or any other type, is not an
+    /// answer.
+    Count,
 }
 
 impl Answer {
@@ -146,6 +150,7 @@ impl Answer {
                         .keys()
                         .all(|key| key == "name" || key == "licence_number")
             }),
+            Self::Count => value.is_u64(),
         }
     }
 }

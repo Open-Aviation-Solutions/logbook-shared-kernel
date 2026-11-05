@@ -190,6 +190,24 @@ fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
 }
 
 #[test]
+fn a_count_is_a_non_negative_whole_number() {
+    for count in [json!(0), json!(1), json!(12)] {
+        assert!(Answer::Count.accepts(&count), "{count}");
+    }
+    for count in [
+        json!(-1),
+        json!(1.5),
+        json!("2"),
+        json!(true),
+        json!(null),
+        json!([1]),
+        json!({"count": 1}),
+    ] {
+        assert!(!Answer::Count.accepts(&count), "{count}");
+    }
+}
+
+#[test]
 fn a_persons_licence_number_may_be_null() {
     assert!(Answer::Person.accepts(&json!({"name": "A. Pilot", "licence_number": null})));
 }
