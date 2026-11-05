@@ -5,13 +5,11 @@
 mod common;
 
 use aircraft_type_descriptions::{AirframeKind, EngineType};
-use common::{flight_parts, session_parts};
-use icao_shared_kernel::{
-    Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
-};
+use common::{c172, flight_parts, session_parts};
+use icao_shared_kernel::{AircraftType, Capacity, FlightDuration, LocationIndicator};
 use logbook_shared_kernel::{
-    AircraftDescription, Approach, ApproachError, ApproachType, Entry, EntryError, EntryParts,
-    InstrumentTime, Subject,
+    AircraftDescription, Approach, ApproachType, Entry, EntryError, EntryParts, InstrumentTime,
+    Subject,
 };
 use uuid::Uuid;
 
@@ -24,10 +22,7 @@ fn flight(sole_occupant: bool) -> EntryParts {
     EntryParts {
         subject: Subject::Flight {
             flight: Uuid::nil(),
-            aircraft: Aircraft::new(
-                AircraftType::parse("C172").unwrap(),
-                AircraftRegistration::new(NationalityMark::parse("VH").unwrap(), "ABC").unwrap(),
-            ),
+            aircraft: c172(),
             description: None,
             sole_occupant,
         },
@@ -290,13 +285,8 @@ fn every_rule_broken_is_reported() {
 }
 
 #[test]
-fn an_approachs_aerodrome_is_a_4_letter_icao_location_indicator() {
-    assert!(Approach::new(ApproachType::Ils, "YSBK").is_ok());
-    for aerodrome in ["SYD", "YS", "YSBKX", "ysbk", "YS1K"] {
-        assert_eq!(
-            Approach::new(ApproachType::Ils, aerodrome),
-            Err(ApproachError::Aerodrome(aerodrome.into())),
-            "{aerodrome}"
-        );
-    }
+fn an_approach_holds_its_procedure_and_aerodrome() {
+    let approach = Approach::new(ApproachType::Ils, LocationIndicator::parse("YSBK").unwrap());
+    assert_eq!(approach.procedure(), ApproachType::Ils);
+    assert_eq!(*approach.aerodrome(), "YSBK");
 }

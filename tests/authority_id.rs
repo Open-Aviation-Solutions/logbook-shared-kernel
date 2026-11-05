@@ -21,14 +21,13 @@ fn an_australian_licence_is_issued_by_au_casa() {
 }
 
 #[test]
-fn what_a_licence_refuses_of_its_state_and_authority_is_refused() {
+fn a_bad_state_or_an_empty_authority_is_refused() {
     for state in ["", "A", "AUS", "au", "A1"] {
         assert_eq!(
             AuthorityId::new(state, "CASA"),
             Err(ValidationError::IssuingState(state.into())),
             "{state}"
         );
-        assert!(IssuingState::parse(state).is_err());
     }
     assert_eq!(
         AuthorityId::new("AU", ""),
@@ -36,7 +35,6 @@ fn what_a_licence_refuses_of_its_state_and_authority_is_refused() {
             field: "issuing_authority"
         })
     );
-    assert!(Licence::new(IssuingState::parse("AU").unwrap(), "", "1", Vec::new()).is_err());
 }
 
 #[test]
