@@ -45,8 +45,10 @@ pub fn count_in_window(all_event_dates: &[Date], cutoff: Date) -> usize {
 /// a currency by (CASA's reg 61.880(3)(a), for one). `None` only if the
 /// result is outside the representable date range.
 pub fn end_of_nth_month_after(d: Date, n: u32) -> Option<Date> {
-    let total = u32::from(u8::from(d.month())) + n;
-    let year = d.year() + i32::try_from((total - 1) / 12).ok()?;
+    let total = u32::from(u8::from(d.month())).checked_add(n)?;
+    let year = d
+        .year()
+        .checked_add(i32::try_from((total - 1) / 12).ok()?)?;
     let month = Month::try_from(u8::try_from((total - 1) % 12 + 1).ok()?).ok()?;
     Date::from_calendar_date(year, month, month.length(year)).ok()
 }
@@ -56,7 +58,11 @@ pub fn end_of_nth_month_after(d: Date, n: u32) -> Option<Date> {
 ///
 /// `None` only if the result is outside the representable date range.
 pub fn add_months_clamped(d: Date, months: i32) -> Option<Date> {
-    let total = d.year() * 12 + i32::from(u8::from(d.month())) - 1 + months;
+    let total = d
+        .year()
+        .checked_mul(12)?
+        .checked_add(i32::from(u8::from(d.month())) - 1)?
+        .checked_add(months)?;
     let year = total.div_euclid(12);
     let month = Month::try_from(u8::try_from(total.rem_euclid(12) + 1).ok()?).ok()?;
     Date::from_calendar_date(year, month, d.day().min(month.length(year))).ok()
@@ -171,5 +177,14 @@ mod tests {
         let cutoff = date!(2026 - 03 - 01);
         let dates = [date!(2026 - 03 - 01), date!(2026 - 03 - 02)];
         assert_eq!(count_in_window(&dates, cutoff), 1);
+    }
+
+    #[test]
+    fn a_date_out_of_range_is_none_and_not_a_panic() {
+        let d = date!(2026 - 03 - 10);
+        assert_eq!(add_months_clamped(d, i32::MAX), None);
+        assert_eq!(add_months_clamped(d, i32::MIN), None);
+        assert_eq!(months_on(d, i32::MAX), None);
+        assert_eq!(end_of_nth_month_after(d, u32::MAX), None);
     }
 }

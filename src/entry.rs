@@ -22,7 +22,7 @@ use time::Date;
 use uuid::Uuid;
 
 pub use aircraft_type_descriptions::AircraftDescription;
-pub use approach::{Approach, ApproachType};
+pub use approach::{Approach, ApproachError, ApproachType};
 pub use authority_id::AuthorityId;
 pub use day_night::DayNight;
 pub use instrument_time::InstrumentTime;
@@ -124,6 +124,8 @@ impl Entry {
             errors.push(EntryError::NightOverFlightTime);
         }
         let instrument = &parts.instrument;
+        // `None`: more than a duration can hold, and so more than the flight
+        // time.
         let instrument_time = match parts.subject {
             Subject::Flight { .. } => {
                 if instrument.ground.total_minutes() > 0 {
@@ -132,13 +134,14 @@ impl Entry {
                 instrument.flight()
             }
             Subject::Session { .. } => {
-                if instrument.flight().total_minutes() > 0 {
+                if instrument.actual.total_minutes() > 0 || instrument.simulated.total_minutes() > 0
+                {
                     errors.push(EntryError::InstrumentFlightTimeOnSession);
                 }
-                instrument.ground
+                Some(instrument.ground)
             }
         };
-        if instrument_time > parts.flight_time {
+        if instrument_time.is_none_or(|time| time > parts.flight_time) {
             errors.push(EntryError::InstrumentOverFlightTime);
         }
         if errors.is_empty() {
@@ -239,8 +242,6 @@ pub enum EntryError {
     /// Instrument flight time, actual or simulated, on a session, which is
     /// on the ground.
     InstrumentFlightTimeOnSession,
-    /// An approach's aerodrome that is not 3 or 4 capital letters.
-    Aerodrome(String),
 }
 
 impl fmt::Display for EntryError {
@@ -259,9 +260,6 @@ impl fmt::Display for EntryError {
             Self::GroundTimeOnFlight => f.write_str("a flight has instrument ground time"),
             Self::InstrumentFlightTimeOnSession => {
                 f.write_str("a session has instrument flight time")
-            }
-            Self::Aerodrome(aerodrome) => {
-                write!(f, "aerodrome '{aerodrome}' must be 3 or 4 capital letters")
             }
         }
     }

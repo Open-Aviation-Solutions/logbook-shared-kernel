@@ -13,24 +13,29 @@ use crate::entry::{Assessment, AssessmentId, Entry, EntryId};
 /// How far back a check looks: a number of days, or of calendar months.
 #[derive(Debug, Clone, Copy)]
 enum LookBack {
-    Days(i64),
-    Months(i32),
+    Days(u32),
+    Months(u32),
 }
 
 impl LookBack {
     /// The last day before the look-back from `reference` begins.
     fn cutoff(self, reference: Date) -> Date {
         match self {
-            Self::Days(days) => reference.saturating_sub(Duration::days(days)),
-            Self::Months(months) => add_months_clamped(reference, -months).unwrap_or(Date::MIN),
+            Self::Days(days) => reference.saturating_sub(Duration::days(days.into())),
+            Self::Months(months) => i32::try_from(months)
+                .ok()
+                .and_then(|months| add_months_clamped(reference, -months))
+                .unwrap_or(Date::MIN),
         }
     }
 
     /// The first day an event on `d` is outside the look-back.
     fn expiry(self, d: Date) -> Option<Date> {
         match self {
-            Self::Days(days) => d.checked_add(Duration::days(days)),
-            Self::Months(months) => months_on(d, months),
+            Self::Days(days) => d.checked_add(Duration::days(days.into())),
+            Self::Months(months) => i32::try_from(months)
+                .ok()
+                .and_then(|months| months_on(d, months)),
         }
     }
 }
@@ -55,13 +60,13 @@ pub struct EventWindow {
 
 impl EventWindow {
     /// A window of `window_days` days.
-    pub fn new(reference: Date, window_days: i64, required: usize) -> Self {
+    pub fn new(reference: Date, window_days: u32, required: usize) -> Self {
         Self::looking_back(reference, LookBack::Days(window_days), required)
     }
 
     /// A window of `months` calendar months: an event on 9 December is inside
     /// a 6-month window through 8 June (see [`months_on`]).
-    pub fn months(reference: Date, months: i32, required: usize) -> Self {
+    pub fn months(reference: Date, months: u32, required: usize) -> Self {
         Self::looking_back(reference, LookBack::Months(months), required)
     }
 
@@ -113,12 +118,16 @@ impl EventWindow {
 
     /// The check's result, from what has been recorded.
     pub fn result(&self) -> CurrencyResult {
+        let mut qualifying = self.qualifying.clone();
+        qualifying.sort_by(|a, b| (&a.entry, a.events).cmp(&(&b.entry, b.events)));
+        let mut qualifying_assessments = self.qualifying_assessments.clone();
+        qualifying_assessments.sort();
         CurrencyResult {
             expiry_date: nth_most_recent(&self.event_dates, self.required)
                 .and_then(|date| self.look_back.expiry(date)),
             reference: self.reference,
-            qualifying: self.qualifying.clone(),
-            qualifying_assessments: self.qualifying_assessments.clone(),
+            qualifying,
+            qualifying_assessments,
             found: count_in_window(&self.event_dates, self.cutoff),
             required: self.required,
             look_back_days: (self.reference - self.cutoff).whole_days(),
@@ -199,5 +208,29 @@ mod tests {
         assert_eq!(result.found, 0);
         assert_eq!(result.qualifying_assessments, []);
         assert_eq!(result.expiry_date, None);
+    }
+
+    #[test]
+    fn the_longest_look_backs_do_not_panic() {
+        let mut days = EventWindow::new(REFERENCE, u32::MAX, 1);
+        days.record(&entry("a", REFERENCE), 1);
+        assert_eq!(days.result().found, 1);
+        let mut months = EventWindow::months(REFERENCE, u32::MAX, 1);
+        months.record(&entry("a", REFERENCE), 1);
+        assert_eq!(months.result().found, 1);
+    }
+
+    #[test]
+    fn the_qualifying_entries_do_not_depend_on_the_order_they_arrive_in() {
+        let mut window = EventWindow::new(REFERENCE, 90, 1);
+        window.record(&entry("b", REFERENCE), 1);
+        window.record(&entry("a", REFERENCE), 2);
+        let ids: Vec<_> = window
+            .result()
+            .qualifying
+            .into_iter()
+            .map(|contribution| contribution.entry)
+            .collect();
+        assert_eq!(ids, [EntryId::new("a"), EntryId::new("b")]);
     }
 }

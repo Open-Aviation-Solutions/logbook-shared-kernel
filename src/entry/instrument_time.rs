@@ -42,13 +42,13 @@ impl Default for InstrumentTime {
 }
 
 impl InstrumentTime {
-    /// Instrument flight time: actual and simulated together.
-    pub fn flight(&self) -> FlightDuration {
+    /// Instrument flight time: actual and simulated together. `None` when
+    /// the sum is more than a [`FlightDuration`] can hold.
+    pub fn flight(&self) -> Option<FlightDuration> {
         let minutes = self
             .actual
             .total_minutes()
-            .saturating_add(self.simulated.total_minutes());
-        FlightDuration::new(minutes)
-            .expect("a sum of durations that are not negative is not negative")
+            .checked_add(self.simulated.total_minutes())?;
+        FlightDuration::new(minutes).ok()
     }
 }

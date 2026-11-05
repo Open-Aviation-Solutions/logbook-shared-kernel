@@ -16,24 +16,16 @@ use uuid::Uuid;
 
 /// An hour's flight, flown in `capacity`.
 pub fn flight(id: &str, capacity: Capacity) -> Entry {
-    Entry::new(parts(id, capacity)).unwrap()
+    Entry::new(flight_parts(id, capacity)).unwrap()
 }
 
 /// An hour's session, flown in `capacity`.
 pub fn session(id: &str, capacity: Capacity) -> Entry {
-    Entry::new(EntryParts {
-        subject: Subject::Session {
-            session: Uuid::nil(),
-            device: Uuid::nil(),
-            simulated_type: None,
-            description: None,
-        },
-        ..parts(id, capacity)
-    })
-    .unwrap()
+    Entry::new(session_parts(id, capacity)).unwrap()
 }
 
-fn parts(id: &str, capacity: Capacity) -> EntryParts {
+/// The parts of [`flight`], with someone else on board.
+pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
     EntryParts {
         id: EntryId::new(id),
         date: date!(2026 - 11 - 05),
@@ -55,5 +47,18 @@ fn parts(id: &str, capacity: Capacity) -> EntryParts {
         take_offs: DayNight::default(),
         landings: DayNight::default(),
         sections: BTreeMap::new(),
+    }
+}
+
+/// The parts of [`session`].
+pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
+    EntryParts {
+        subject: Subject::Session {
+            session: Uuid::nil(),
+            device: Uuid::nil(),
+            simulated_type: None,
+            description: None,
+        },
+        ..flight_parts(id, capacity)
     }
 }
