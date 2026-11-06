@@ -37,12 +37,13 @@ What it holds, in two modules:
   is
   [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,
   re-exported.
-- **`authority`**: the trait an authority implements, once for each
-  authority (whether an entry counts under its rules, what an aircraft type
-  counts as, its requirements and their currency, the questions it asks about
-  an entry or an assessment and the problems with its answers); the machinery
-  its currency checks are written over; and the description of those
-  questions, as data for the host to show.
+- **`authority`**: the trait an authority implements, one implementation
+  built once (one object) for each authority it serves (whether an entry
+  counts under its rules, what an aircraft type counts as, its requirements
+  and their currency, the questions it asks about an entry or an assessment
+  and the problems with its answers); the machinery its currency checks are
+  written over; and the description of those questions, as data for the host
+  to show.
 
 What it does not hold:
 

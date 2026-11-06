@@ -37,7 +37,8 @@ it, are on [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel
 Out of scope (do not add here): any one State's rules, names or regulations
 (CASA's are au-casa's), ICAO's terms themselves (`icao-shared-kernel`'s),
 storage and stored formats (the application's; the one exception is the
-reserved key the version of an authority's information is stored under, which is this crate's, as
+reserved key the version of an authority's information is stored under,
+which is this crate's, as
 [#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
 settled), and any user interface.
 

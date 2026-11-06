@@ -1,4 +1,4 @@
-// This Source Code Questions is subject to the terms of the Mozilla Public
+// This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
@@ -348,7 +348,7 @@ fn the_required_unanswered_questions_are_those_shown_without_an_accepted_answer(
 
 #[test]
 fn the_questions_version_is_stored_with_the_answers_and_read_back() {
-    let questions = Questions::new(2, casa_picus().iter().cloned().collect());
+    let questions = Questions::new(2, Vec::new());
     let mut information =
         AuthoritySpecificInformation::new(json!({"route": "operator", "_version": 1}));
     questions.stamp(&mut information);
@@ -356,7 +356,7 @@ fn the_questions_version_is_stored_with_the_answers_and_read_back() {
         information.value(),
         &json!({"route": "operator", "_version": 2})
     );
-    assert_eq!(information.version(), Some(2));
+    assert_eq!(information.version(), Some(questions.version()));
 }
 
 #[test]

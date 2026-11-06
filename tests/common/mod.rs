@@ -74,7 +74,8 @@ pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
     }
 }
 
-/// An assessment conducted on [`flight`]'s flight, with no authority-specific information.
+/// An assessment conducted on [`flight`]'s flight, with no
+/// authority-specific information.
 pub fn assessment(id: &str) -> Assessment {
     Assessment {
         id: AssessmentId::new(id),

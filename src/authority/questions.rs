@@ -44,9 +44,21 @@ impl Questions {
         Self { version, questions }
     }
 
+    /// The version of the stored format of the answers, for the authority
+    /// to compare with [`AuthoritySpecificInformation::version`].
+    pub fn version(&self) -> u32 {
+        self.version
+    }
+
     /// Every question, in order, whether shown or not.
     pub fn iter(&self) -> std::slice::Iter<'_, Question> {
         self.questions.iter()
+    }
+
+    /// Whether there are no questions: the authority asks nothing about the
+    /// record.
+    pub fn is_empty(&self) -> bool {
+        self.questions.is_empty()
     }
 
     /// Write the version into `information`, under
@@ -151,6 +163,15 @@ impl Questions {
     }
 }
 
+impl<'a> IntoIterator for &'a Questions {
+    type Item = &'a Question;
+    type IntoIter = std::slice::Iter<'a, Question>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
 /// One question.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Question {
@@ -168,8 +189,8 @@ pub struct Question {
 }
 
 /// The kind of answer a question takes, and how it is stored in the
-/// authority-specific information, under the question's key, so that the host and the authority
-/// agree on it.
+/// authority-specific information, under the question's key, so that the
+/// host and the authority agree on it.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Answer {
     /// One of the choices, stored as its `value`, a string.
