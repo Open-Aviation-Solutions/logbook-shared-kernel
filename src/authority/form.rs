@@ -2,11 +2,12 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! The form description: the questions an authority asks about an entry, as
-//! data for the host to show, with no dependence on a user interface.
+//! The form description: the questions an authority asks about a record (an
+//! entry or an assessment), as data for the host to show, with no dependence
+//! on a user interface.
 //!
-//! A question is shown on conditions on the entry's common part and on the
-//! answers already given, which this module evaluates, so that the host and
+//! A question is shown on conditions on the record and on the answers
+//! already given, which this module evaluates, so that the host and
 //! the authority read them the same way. For the same reason it says which
 //! answers are stale ([`Form::retain_shown`]) and which required questions
 //! are unanswered ([`Form::unanswered`]). The rules that refuse an answer are
@@ -16,9 +17,9 @@
 use icao_shared_kernel::Capacity;
 use serde_json::Value;
 
-use crate::entry::{Entry, Section};
+use crate::entry::{Record, Section};
 
-/// The questions an authority asks about an entry, in order.
+/// The questions an authority asks about a record, in order.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Form {
     /// The version of the section's stored format, the authority's own. It
@@ -51,7 +52,7 @@ impl Form {
         }
     }
 
-    /// The questions shown for an entry, in order, given the answers in
+    /// The questions shown for `record`, in order, given the answers in
     /// `section` so far (`None`: none yet).
     ///
     /// An answer counts towards a condition only when its question is shown
@@ -59,7 +60,7 @@ impl Form {
     /// a question now hidden is not given, so its follow-ups are hidden too.
     /// This is the only way to evaluate a form's conditions, so that the host
     /// and the authority read them the same way.
-    pub fn shown<'a>(&'a self, entry: &Entry, section: Option<&Section>) -> Vec<&'a Question> {
+    pub fn shown<'a>(&'a self, record: Record, section: Option<&Section>) -> Vec<&'a Question> {
         let mut shown: Vec<&'a Question> = Vec::new();
         for question in &self.questions {
             let answer = |key: &str| {
@@ -72,7 +73,7 @@ impl Form {
             if question
                 .shown_when
                 .as_ref()
-                .is_none_or(|condition| condition.holds(entry, &answer))
+                .is_none_or(|condition| condition.holds(record, &answer))
             {
                 shown.push(question);
             }
@@ -81,15 +82,15 @@ impl Form {
     }
 
     /// Remove from `section` the answers to this form's questions that
-    /// [`Form::shown`] does not show for `entry`: an answer left from before
+    /// [`Form::shown`] does not show for `record`: an answer left from before
     /// the pilot changed the answer that showed its question. A host calls
     /// it before it asks the authority to validate a section or saves it, so
     /// that the authority never reads an answer the pilot cannot see. A key
     /// that is no question's is kept, as it is the authority's, and so is the
     /// section's version.
-    pub fn retain_shown(&self, entry: &Entry, section: &mut Section) {
+    pub fn retain_shown(&self, record: Record, section: &mut Section) {
         let shown: Vec<&str> = self
-            .shown(entry, Some(section))
+            .shown(record, Some(section))
             .into_iter()
             .map(|question| question.key)
             .collect();
@@ -102,12 +103,16 @@ impl Form {
         }
     }
 
-    /// The questions shown for `entry` that are required and have no
+    /// The questions shown for `record` that are required and have no
     /// answer: their key is absent from `section`, or holds a value that the
     /// question's [`Answer::accepts`] refuses. This is what "answered"
     /// means, for the host and the authority alike.
-    pub fn unanswered<'a>(&'a self, entry: &Entry, section: Option<&Section>) -> Vec<&'a Question> {
-        self.shown(entry, section)
+    pub fn unanswered<'a>(
+        &'a self,
+        record: Record,
+        section: Option<&Section>,
+    ) -> Vec<&'a Question> {
+        self.shown(record, section)
             .into_iter()
             .filter(|question| question.required)
             .filter(|question| {
@@ -203,7 +208,8 @@ pub struct Choice {
 /// form for this.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
-    /// The entry's capacity is this one.
+    /// The record is an entry, and its capacity is this one. It never
+    /// holds for an assessment, which has no capacity.
     Capacity(Capacity),
     /// The answer stored under `key` is `is`, compared as it is stored.
     /// Only the answer to a question shown earlier counts.
@@ -215,13 +221,15 @@ pub enum Condition {
 impl Condition {
     /// Whether the condition holds, with `answer` giving the answer to each
     /// key, if given.
-    fn holds<'s>(&self, entry: &Entry, answer: &dyn Fn(&str) -> Option<&'s Value>) -> bool {
+    fn holds<'s>(&self, record: Record, answer: &dyn Fn(&str) -> Option<&'s Value>) -> bool {
         match self {
-            Self::Capacity(capacity) => entry.capacity() == *capacity,
+            Self::Capacity(capacity) => {
+                matches!(record, Record::Entry(entry) if entry.capacity() == *capacity)
+            }
             Self::Answer { key, is } => answer(key) == Some(is),
             Self::All(conditions) => conditions
                 .iter()
-                .all(|condition| condition.holds(entry, answer)),
+                .all(|condition| condition.holds(record, answer)),
         }
     }
 }

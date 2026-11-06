@@ -7,9 +7,9 @@
 
 mod common;
 
-use common::flight;
+use common::{assessment, flight};
 use icao_shared_kernel::Capacity;
-use logbook_shared_kernel::{Answer, Choice, Condition, Form, Question, Section};
+use logbook_shared_kernel::{Answer, Choice, Condition, Form, Question, Record, Section};
 use serde_json::{json, Value};
 
 /// CASA's pilot in command under supervision (CASR 1998 reg 61.095), as the
@@ -89,7 +89,7 @@ fn easa_picus() -> Form {
 fn shown(form: &Form, capacity: Capacity, section: Option<Value>) -> Vec<&'static str> {
     let entry = flight("e", capacity);
     let section = section.map(Section::new);
-    form.shown(&entry, section.as_ref())
+    form.shown(Record::Entry(&entry), section.as_ref())
         .into_iter()
         .map(|question| question.key)
         .collect()
@@ -136,7 +136,7 @@ fn assert_answers_every_question_shown(
 ) {
     let entry = flight("e", capacity);
     let section = Section::new(section.clone());
-    let questions = form.shown(&entry, Some(&section));
+    let questions = form.shown(Record::Entry(&entry), Some(&section));
     assert_eq!(questions.len(), count);
     for question in questions {
         let answer = &section.value()[question.key];
@@ -299,7 +299,7 @@ fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
         "other": 1,
         "_version": 1
     }));
-    form.retain_shown(&entry, &mut section);
+    form.retain_shown(Record::Entry(&entry), &mut section);
     assert_eq!(
         section.value(),
         &json!({"route": "operator", "other": 1, "_version": 1})
@@ -312,7 +312,7 @@ fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_ans
     let entry = flight("e", PICUS);
     let unanswered = |section: Option<Value>| -> Vec<&'static str> {
         let section = section.map(Section::new);
-        form.unanswered(&entry, section.as_ref())
+        form.unanswered(Record::Entry(&entry), section.as_ref())
             .into_iter()
             .map(|question| question.key)
             .collect()
@@ -368,4 +368,62 @@ fn a_section_without_a_whole_number_under_the_key_has_no_version() {
     ] {
         assert_eq!(Section::new(value.clone()).version(), None, "{value}");
     }
+}
+
+/// A form with a question always shown, a follow-up on its answer, and a
+/// question for a pilot in command.
+fn with_capacity_question() -> Form {
+    let question = |key, shown_when| Question {
+        key,
+        label: key.into(),
+        regulation: "",
+        answer: Answer::YesNo,
+        shown_when,
+        required: true,
+    };
+    Form {
+        version: 1,
+        questions: vec![
+            question("first", None),
+            question(
+                "second",
+                Some(Condition::Answer {
+                    key: "first",
+                    is: json!(true),
+                }),
+            ),
+            question("pic", Some(Condition::Capacity(Capacity::PilotInCommand))),
+        ],
+    }
+}
+
+#[test]
+fn a_capacity_condition_holds_only_for_an_entry() {
+    let form = with_capacity_question();
+    let entry = flight("e", Capacity::PilotInCommand);
+    let assessment = assessment("a");
+    let keys = |record| -> Vec<&'static str> {
+        form.shown(record, None)
+            .into_iter()
+            .map(|question| question.key)
+            .collect()
+    };
+    assert_eq!(keys(Record::Entry(&entry)), ["first", "pic"]);
+    assert_eq!(keys(Record::Assessment(&assessment)), ["first"]);
+}
+
+#[test]
+fn an_assessments_answers_show_remove_and_leave_unanswered_as_an_entrys_do() {
+    let form = with_capacity_question();
+    let assessment = assessment("a");
+    let record = Record::Assessment(&assessment);
+    let keys = |questions: Vec<&Question>| -> Vec<&'static str> {
+        questions.into_iter().map(|question| question.key).collect()
+    };
+    let mut section = Section::new(json!({"first": false, "second": true, "pic": true}));
+    assert_eq!(keys(form.shown(record, Some(&section))), ["first"]);
+    form.retain_shown(record, &mut section);
+    assert_eq!(section.value(), &json!({"first": false}));
+    let section = Section::new(json!({"first": true}));
+    assert_eq!(keys(form.unanswered(record, Some(&section))), ["second"]);
 }

@@ -12,7 +12,9 @@ use std::collections::BTreeMap;
 use icao_shared_kernel::{
     Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
 };
-use logbook_shared_kernel::{DayNight, Entry, EntryId, EntryParts, InstrumentTime, Subject};
+use logbook_shared_kernel::{
+    Assessment, AssessmentId, DayNight, Entry, EntryId, EntryParts, InstrumentTime, Subject,
+};
 use time::macros::date;
 use uuid::Uuid;
 
@@ -69,5 +71,15 @@ pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
             simulated: None,
         },
         ..flight_parts(id, capacity)
+    }
+}
+
+/// An assessment conducted on [`flight`]'s flight, with no sections.
+pub fn assessment(id: &str) -> Assessment {
+    Assessment {
+        id: AssessmentId::new(id),
+        date: date!(2026 - 11 - 05),
+        flight: Uuid::nil(),
+        sections: BTreeMap::new(),
     }
 }

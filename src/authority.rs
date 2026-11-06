@@ -20,7 +20,7 @@ pub mod window;
 use icao_shared_kernel::FlightDuration;
 use time::Date;
 
-use crate::entry::{AircraftDescription, AuthorityId, Entry, Logbook};
+use crate::entry::{AircraftDescription, AuthorityId, Entry, Logbook, Record};
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
@@ -58,19 +58,23 @@ pub trait LicensingAuthority {
     /// The authority's own totals of the entries dated in `range`.
     fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<Figure>;
 
-    /// The questions `authority`, one of [`authorities`], asks about an
-    /// entry for its section, given the entry's common part.
+    /// The questions `authority`, one of [`authorities`], asks for its
+    /// section of `record`, an entry or an assessment, given the record. An
+    /// authority with nothing to ask about a kind of record returns a form
+    /// with no questions for it.
     ///
     /// [`authorities`]: LicensingAuthority::authorities
-    fn section_form(&self, authority: &AuthorityId, entry: &Entry) -> Form;
+    fn section_form(&self, authority: &AuthorityId, record: Record) -> Form;
 
-    /// The problems with `authority`'s section of an entry, each at a
+    /// The problems with `authority`'s section of `record`, each at a
     /// question or at the section as a whole ([`ProblemAt`]): a missing or
     /// unsupported version is reported at the section. `authority` is one
     /// of [`authorities`], so the host knows
     /// which section each problem is in. The host has removed the answers
     /// to hidden questions first ([`Form::retain_shown`]), and
     /// [`Form::unanswered`] lists the required questions left unanswered.
+    /// An authority that asks nothing about a kind of record accepts any
+    /// section of it, and returns no problems.
     /// The section's version is as it was stored ([`Section::version`]):
     /// `None` for a section not saved yet, since the host writes the form's
     /// version only after this, as it saves the section ([`Form::stamp`]).
@@ -78,7 +82,7 @@ pub trait LicensingAuthority {
     /// [`Section::version`]: crate::entry::Section::version
     ///
     /// [`authorities`]: LicensingAuthority::authorities
-    fn validate_section(&self, authority: &AuthorityId, entry: &Entry) -> Vec<Problem>;
+    fn validate_section(&self, authority: &AuthorityId, record: Record) -> Vec<Problem>;
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation
@@ -115,7 +119,7 @@ pub struct Classification {
     pub cautions: Vec<String>,
 }
 
-/// A problem with an authority's section of an entry.
+/// A problem with an authority's section of a record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
     pub at: ProblemAt,

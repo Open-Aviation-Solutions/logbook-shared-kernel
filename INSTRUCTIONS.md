@@ -24,7 +24,8 @@ wants the records without the interface):
   accumulator and check traits, the event window and `CurrencyResult`, so
   each authority writes its currency checks over the same machinery; and the
   form description, in which an authority asks its questions about an entry
-  as data, with no dependence on a user interface.
+  or an assessment (a `Record`) as data, with no dependence on a user
+  interface.
 
 The neutral description of an aircraft type is `aircraft-type-descriptions`'s
 `AircraftDescription`, re-exported from `entry`; this crate defines none of

@@ -10,8 +10,8 @@ use common::{flight, session};
 use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
     run, AircraftDescription, AuthorityId, Classification, CurrencyResult, DateRange, Entry,
-    EntryAccumulator, Figure, Form, LicensingAuthority, Logbook, Measure, Problem, Requirement,
-    RequirementId, Subject, Total,
+    EntryAccumulator, Figure, Form, LicensingAuthority, Logbook, Measure, Problem, Record,
+    Requirement, RequirementId, Subject, Total,
 };
 use time::Date;
 
@@ -48,14 +48,14 @@ impl LicensingAuthority for FlightsOnly {
         Vec::new()
     }
 
-    fn section_form(&self, _: &AuthorityId, _: &Entry) -> Form {
+    fn section_form(&self, _: &AuthorityId, _: Record) -> Form {
         Form {
             version: 1,
             questions: Vec::new(),
         }
     }
 
-    fn validate_section(&self, _: &AuthorityId, _: &Entry) -> Vec<Problem> {
+    fn validate_section(&self, _: &AuthorityId, _: Record) -> Vec<Problem> {
         Vec::new()
     }
 }

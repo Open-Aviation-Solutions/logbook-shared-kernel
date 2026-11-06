@@ -11,6 +11,7 @@ mod authority_id;
 mod day_night;
 mod instrument_time;
 mod logbook;
+mod record;
 mod route;
 mod section;
 
@@ -27,6 +28,7 @@ pub use authority_id::AuthorityId;
 pub use day_night::DayNight;
 pub use instrument_time::InstrumentTime;
 pub use logbook::{Assessment, AssessmentId, Logbook};
+pub use record::Record;
 pub use route::Route;
 pub use section::Section;
 
