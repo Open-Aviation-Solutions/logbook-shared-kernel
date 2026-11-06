@@ -65,10 +65,17 @@ pub trait LicensingAuthority {
     fn section_form(&self, authority: &AuthorityId, entry: &Entry) -> Form;
 
     /// The problems with `authority`'s section of an entry, each at a
-    /// question. `authority` is one of [`authorities`], so the host knows
+    /// question or at the section as a whole ([`ProblemAt`]): a missing or
+    /// unsupported version is reported at the section. `authority` is one
+    /// of [`authorities`], so the host knows
     /// which section each problem is in. The host has removed the answers
     /// to hidden questions first ([`Form::retain_shown`]), and
     /// [`Form::unanswered`] lists the required questions left unanswered.
+    /// The section's version is as it was stored ([`Section::version`]):
+    /// `None` for a section not saved yet, since the host writes the form's
+    /// version only after this, as it saves the section ([`Form::stamp`]).
+    ///
+    /// [`Section::version`]: crate::entry::Section::version
     ///
     /// [`authorities`]: LicensingAuthority::authorities
     fn validate_section(&self, authority: &AuthorityId, entry: &Entry) -> Vec<Problem>;
@@ -111,17 +118,29 @@ pub struct Classification {
 /// A problem with an authority's section of an entry.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
-    /// The question it is reported at ([`Question::key`]).
-    pub key: &'static str,
+    pub at: ProblemAt,
     pub kind: ProblemKind,
     pub text: String,
     pub regulation: &'static str,
 }
 
+/// Where in the section a problem is reported, for the host to show it there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProblemAt {
+    /// At the question with this key ([`Question::key`]).
+    Question(&'static str),
+    /// At the section as a whole, such as a missing or unsupported version
+    /// ([`Section::version`]). The host shows it at the top of the section.
+    ///
+    /// [`Section::version`]: crate::entry::Section::version
+    Section,
+}
+
 /// Whether a problem stops the entry being saved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProblemKind {
-    /// The section contradicts itself, and the entry is not saved.
+    /// The authority cannot accept the section: it contradicts itself, or
+    /// its version is missing or unsupported. The entry is not saved.
     Refusal,
     /// The section says what the authority's conditions do not support. The
     /// entry is the pilot's claim, so it is saved, and the host shows the

@@ -21,10 +21,36 @@ use crate::entry::{Entry, Section};
 /// The questions an authority asks about an entry, in order.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Form {
+    /// The version of the section's stored format, the authority's own. It
+    /// changes it with each breaking change to the section, which ships
+    /// with a migration of the stored sections. The host stores it with the
+    /// answers ([`Form::stamp`]), and the authority reads it back from a
+    /// stored section ([`Section::version`]).
+    pub version: u32,
+    /// No question's key may be [`Section::VERSION_KEY`]. Nothing checks a
+    /// form for this.
     pub questions: Vec<Question>,
 }
 
 impl Form {
+    /// Write this form's version into `section`, under
+    /// [`Section::VERSION_KEY`], replacing any there. A host calls it last,
+    /// after the authority has validated the section as stored, and just
+    /// before it saves it, so that the authority sees a stored section's own
+    /// version (and a new section's none) and the saved section says which
+    /// version of the form its answers were given to. A section that is
+    /// `null` becomes one holding only the version; any other that is not a
+    /// JSON object is left as it is, and so has no version.
+    pub fn stamp(&self, section: &mut Section) {
+        let value = section.value_mut();
+        if value.is_null() {
+            *value = Value::Object(Default::default());
+        }
+        if let Some(answers) = value.as_object_mut() {
+            answers.insert(Section::VERSION_KEY.into(), self.version.into());
+        }
+    }
+
     /// The questions shown for an entry, in order, given the answers in
     /// `section` so far (`None`: none yet).
     ///
@@ -57,9 +83,10 @@ impl Form {
     /// Remove from `section` the answers to this form's questions that
     /// [`Form::shown`] does not show for `entry`: an answer left from before
     /// the pilot changed the answer that showed its question. A host calls
-    /// it before it saves a section or asks the authority to validate it, so
+    /// it before it asks the authority to validate a section or saves it, so
     /// that the authority never reads an answer the pilot cannot see. A key
-    /// that is no question's is kept, as it is the authority's.
+    /// that is no question's is kept, as it is the authority's, and so is the
+    /// section's version.
     pub fn retain_shown(&self, entry: &Entry, section: &mut Section) {
         let shown: Vec<&str> = self
             .shown(entry, Some(section))

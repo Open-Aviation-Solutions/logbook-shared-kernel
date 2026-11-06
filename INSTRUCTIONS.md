@@ -16,7 +16,9 @@ wants the records without the interface):
 - **`entry`**: the logbook's common entry, the pilot's claim in ICAO's terms
   (taken from `icao-shared-kernel`); an authority's section of it, stored as
   the authority gives it, holding the answers to its form under each
-  question's key (which the form reads to decide what is shown); and the neutral
+  question's key (which the form reads to decide what is shown), and the
+  form's version under the reserved key `_version` (`Section::VERSION_KEY`),
+  which no question may use; and the neutral
   description of an aircraft type.
 - **`authority`**: the trait an authority implements to supply its rules; the
   accumulator and check traits, the event window and `CurrencyResult`, so
@@ -31,7 +33,10 @@ it, are on [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel
 
 Out of scope (do not add here): any one State's rules, names or regulations
 (CASA's are au-casa's), ICAO's terms themselves (`icao-shared-kernel`'s),
-storage and stored formats (the application's), and any user interface.
+storage and stored formats (the application's; the one exception is the
+reserved key a section's version is stored under, which is this crate's, as
+[#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
+settled), and any user interface.
 
 ## Conventions
 
