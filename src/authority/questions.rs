@@ -2,74 +2,95 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! The form description: the questions an authority asks about a record (an
-//! entry or an assessment), as data for the host to show, with no dependence
+//! The questions an authority asks about a record (an entry or an
+//! assessment), described as data for the host to show, with no dependence
 //! on a user interface.
 //!
 //! A question is shown on conditions on the record and on the answers
-//! already given, which this module evaluates, so that the host and
-//! the authority read them the same way. For the same reason it says which
-//! answers are stale ([`Form::retain_shown`]) and which required questions
-//! are unanswered ([`Form::unanswered`]). The rules that refuse an answer are
-//! the authority's [`validate_section`](super::LicensingAuthority::validate_section),
-//! in code.
+//! already given, which this module evaluates, so that the host and the
+//! authority read them the same way. For the same reason it says which
+//! answers are stale ([`Questions::drop_hidden_answers_for`]) and which
+//! required questions are unanswered
+//! ([`Questions::required_unanswered_for`]). The rules that refuse an answer
+//! are the authority's
+//! [`problems_for`](super::LicensingAuthority::problems_for), in code.
 
 use icao_shared_kernel::Capacity;
 use serde_json::Value;
 
-use crate::entry::{Record, Section};
+use crate::entry::{AuthoritySpecificInformation, Record};
 
-/// The questions an authority asks about a record, in order.
+/// The questions an authority asks about a record, in order, and the
+/// version of the stored format of their answers.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Form {
-    /// The version of the section's stored format, the authority's own. It
-    /// changes it with each breaking change to the section, which ships
-    /// with a migration of the stored sections. The host stores it with the
-    /// answers ([`Form::stamp`]), and the authority reads it back from a
-    /// stored section ([`Section::version`]). Each form carries its own, so
-    /// an authority's sections of entries and of assessments are versioned
-    /// independently.
-    pub version: u32,
-    /// No question's key may be [`Section::VERSION_KEY`]. Nothing checks a
-    /// form for this.
-    pub questions: Vec<Question>,
+pub struct Questions {
+    version: u32,
+    questions: Vec<Question>,
 }
 
-impl Form {
-    /// Write this form's version into `section`, under
-    /// [`Section::VERSION_KEY`], replacing any there. A host calls it last,
-    /// after the authority has validated the section as stored, and just
-    /// before it saves it, so that the authority sees a stored section's own
-    /// version (and a new section's none) and the saved section says which
-    /// version of the form its answers were given to. A section that is
-    /// `null` becomes one holding only the version; any other that is not a
-    /// JSON object is left as it is, and so has no version.
-    pub fn stamp(&self, section: &mut Section) {
-        let value = section.value_mut();
+impl Questions {
+    /// `version` is the version of the stored format of the answers, the
+    /// authority's own. It changes it with each breaking change to that
+    /// format, which ships with a migration of the stored information. The
+    /// host stores it with the answers ([`Questions::stamp`]), and the
+    /// authority reads it back from stored information
+    /// ([`AuthoritySpecificInformation::version`]). Each set of questions
+    /// carries its own, so an authority's information on entries and on
+    /// assessments is versioned independently.
+    ///
+    /// No question's key may be [`AuthoritySpecificInformation::VERSION_KEY`].
+    /// Nothing checks the questions for this.
+    pub fn new(version: u32, questions: Vec<Question>) -> Self {
+        Self { version, questions }
+    }
+
+    /// Every question, in order, whether shown or not.
+    pub fn iter(&self) -> std::slice::Iter<'_, Question> {
+        self.questions.iter()
+    }
+
+    /// Write the version into `information`, under
+    /// [`AuthoritySpecificInformation::VERSION_KEY`], replacing any there. A
+    /// host calls it last, after the authority has checked the information
+    /// as stored, and just before it saves it, so that the authority sees
+    /// stored information's own version (and new information's none) and the
+    /// saved information says which version of the questions its answers
+    /// were given to. Information that is `null` becomes an object holding
+    /// only the version; any other that is not a JSON object is left as it
+    /// is, and so has no version.
+    pub fn stamp(&self, information: &mut AuthoritySpecificInformation) {
+        let value = information.value_mut();
         if value.is_null() {
             *value = Value::Object(Default::default());
         }
         if let Some(answers) = value.as_object_mut() {
-            answers.insert(Section::VERSION_KEY.into(), self.version.into());
+            answers.insert(
+                AuthoritySpecificInformation::VERSION_KEY.into(),
+                self.version.into(),
+            );
         }
     }
 
     /// The questions shown for `record`, in order, given the answers in
-    /// `section` so far (`None`: none yet).
+    /// `information` so far (`None`: none yet).
     ///
     /// An answer counts towards a condition only when its question is shown
-    /// before the one the condition is on: an answer left in the section to
-    /// a question now hidden is not given, so its follow-ups are hidden too.
-    /// This is the only way to evaluate a form's conditions, so that the host
-    /// and the authority read them the same way.
-    pub fn shown<'a>(&'a self, record: Record, section: Option<&Section>) -> Vec<&'a Question> {
+    /// before the one the condition is on: an answer left in the information
+    /// to a question now hidden is not given, so its follow-ups are hidden
+    /// too. This is the only way to evaluate the questions' conditions, so
+    /// that the host and the authority read them the same way.
+    pub fn shown_for<'a>(
+        &'a self,
+        record: Record,
+        information: Option<&AuthoritySpecificInformation>,
+    ) -> Vec<&'a Question> {
         let mut shown: Vec<&'a Question> = Vec::new();
         for question in &self.questions {
             let answer = |key: &str| {
                 shown
                     .iter()
                     .any(|earlier| earlier.key == key)
-                    .then(|| section.and_then(|section| section.value().get(key)))
+                    .then(|| information.and_then(|information| information.value().get(key)))
                     .flatten()
             };
             if question
@@ -83,20 +104,24 @@ impl Form {
         shown
     }
 
-    /// Remove from `section` the answers to this form's questions that
-    /// [`Form::shown`] does not show for `record`: an answer left from before
-    /// the pilot changed the answer that showed its question. A host calls
-    /// it before it asks the authority to validate a section or saves it, so
-    /// that the authority never reads an answer the pilot cannot see. A key
-    /// that is no question's is kept, as it is the authority's, and so is the
-    /// section's version.
-    pub fn retain_shown(&self, record: Record, section: &mut Section) {
+    /// Remove from `information` the answers to these questions that
+    /// [`Questions::shown_for`] does not show for `record`: an answer left
+    /// from before the pilot changed the answer that showed its question. A
+    /// host calls it before it asks the authority for the problems with the
+    /// information or saves it, so that the authority never reads an answer
+    /// the pilot cannot see. A key that is no question's is kept, as it is
+    /// the authority's, and so is the version.
+    pub fn drop_hidden_answers_for(
+        &self,
+        record: Record,
+        information: &mut AuthoritySpecificInformation,
+    ) {
         let shown: Vec<&str> = self
-            .shown(record, Some(section))
+            .shown_for(record, Some(information))
             .into_iter()
             .map(|question| question.key)
             .collect();
-        if let Some(answers) = section.value_mut().as_object_mut() {
+        if let Some(answers) = information.value_mut().as_object_mut() {
             for question in &self.questions {
                 if !shown.contains(&question.key) {
                     answers.remove(question.key);
@@ -106,20 +131,20 @@ impl Form {
     }
 
     /// The questions shown for `record` that are required and have no
-    /// answer: their key is absent from `section`, or holds a value that the
-    /// question's [`Answer::accepts`] refuses. This is what "answered"
+    /// answer: their key is absent from `information`, or holds a value that
+    /// the question's [`Answer::accepts`] refuses. This is what "answered"
     /// means, for the host and the authority alike.
-    pub fn unanswered<'a>(
+    pub fn required_unanswered_for<'a>(
         &'a self,
         record: Record,
-        section: Option<&Section>,
+        information: Option<&AuthoritySpecificInformation>,
     ) -> Vec<&'a Question> {
-        self.shown(record, section)
+        self.shown_for(record, information)
             .into_iter()
             .filter(|question| question.required)
             .filter(|question| {
-                section
-                    .and_then(|section| section.value().get(question.key))
+                information
+                    .and_then(|information| information.value().get(question.key))
                     .is_none_or(|answer| !question.answer.accepts(answer))
             })
             .collect()
@@ -129,7 +154,8 @@ impl Form {
 /// One question.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Question {
-    /// The key its answer is stored under in the section.
+    /// The key its answer is stored under in the authority-specific
+    /// information.
     pub key: &'static str,
     /// In the regulation's words.
     pub label: String,
@@ -142,7 +168,7 @@ pub struct Question {
 }
 
 /// The kind of answer a question takes, and how it is stored in the
-/// section, under the question's key, so that the host and the authority
+/// authority-specific information, under the question's key, so that the host and the authority
 /// agree on it.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Answer {
@@ -166,7 +192,8 @@ pub enum Answer {
 }
 
 impl Answer {
-    /// Whether `value`, as stored in a section, is an answer of this kind.
+    /// Whether `value`, as stored in authority-specific information, is an
+    /// answer of this kind.
     pub fn accepts(&self, value: &Value) -> bool {
         match self {
             Self::Choice(choices) => value
@@ -203,11 +230,11 @@ pub struct Choice {
 
 /// When a question is shown.
 ///
-/// A condition on an answer may refer only to a question earlier in the
-/// form: [`Form::shown`] counts only the answers to questions already shown,
-/// so a condition on a later question's key, or on a key no question has, is
-/// never met, and the question it is on is never shown. Nothing checks a
-/// form for this.
+/// A condition on an answer may refer only to an earlier question:
+/// [`Questions::shown_for`] counts only the answers to questions already
+/// shown, so a condition on a later question's key, or on a key no question
+/// has, is never met, and the question it is on is never shown. Nothing
+/// checks the questions for this.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Condition {
     /// The record is an entry, and its capacity is this one. It never

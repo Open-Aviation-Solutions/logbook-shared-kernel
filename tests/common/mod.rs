@@ -58,7 +58,7 @@ pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
         approaches: Vec::new(),
         take_offs: DayNight::default(),
         landings: DayNight::default(),
-        sections: BTreeMap::new(),
+        authority_information: BTreeMap::new(),
     }
 }
 
@@ -74,12 +74,12 @@ pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
     }
 }
 
-/// An assessment conducted on [`flight`]'s flight, with no sections.
+/// An assessment conducted on [`flight`]'s flight, with no authority-specific information.
 pub fn assessment(id: &str) -> Assessment {
     Assessment {
         id: AssessmentId::new(id),
         date: date!(2026 - 11 - 05),
         flight: Uuid::nil(),
-        sections: BTreeMap::new(),
+        authority_information: BTreeMap::new(),
     }
 }

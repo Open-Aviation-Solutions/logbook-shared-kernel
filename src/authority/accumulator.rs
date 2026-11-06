@@ -89,7 +89,7 @@ mod tests {
             id: AssessmentId::new("a"),
             date: date!(2024 - 08 - 02),
             flight: Uuid::nil(),
-            sections: BTreeMap::new(),
+            authority_information: BTreeMap::new(),
         };
         let (mut first, mut second) = (Seen::default(), Seen::default());
         run_assessments(

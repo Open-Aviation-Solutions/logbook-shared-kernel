@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! What an authority's section is about.
+//! What an authority's questions and information are about.
 
-use super::{Assessment, AuthorityId, Entry, Section};
+use super::{Assessment, AuthorityId, AuthoritySpecificInformation, Entry};
 
-/// A record in the logbook that holds an authority's section: what the
-/// section, and the authority's form for it, are about. The host says which
-/// at each call, and the authority answers for each kind.
+/// A record in the logbook that holds authority-specific information: what
+/// that information, and the authority's questions for it, are about. The
+/// host says which at each call, and the authority answers for each kind.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Record<'a> {
     Entry(&'a Entry),
@@ -16,11 +16,14 @@ pub enum Record<'a> {
 }
 
 impl<'a> Record<'a> {
-    /// `authority`'s section of the record, if it has one.
-    pub fn section(&self, authority: &AuthorityId) -> Option<&'a Section> {
+    /// `authority`'s information on the record, if it has any.
+    pub fn information_for(
+        &self,
+        authority: &AuthorityId,
+    ) -> Option<&'a AuthoritySpecificInformation> {
         match self {
-            Self::Entry(entry) => entry.sections().get(authority),
-            Self::Assessment(assessment) => assessment.sections.get(authority),
+            Self::Entry(entry) => entry.authority_information().get(authority),
+            Self::Assessment(assessment) => assessment.authority_information.get(authority),
         }
     }
 }

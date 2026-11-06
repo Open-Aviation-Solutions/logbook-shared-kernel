@@ -11,7 +11,8 @@ use icao_shared_kernel::{IssuingState, Licence, ValidationError};
 /// A licensing authority: the State and the authority's code together, as a
 /// licence's `issuing_state` and `issuing_authority` are, written
 /// `AU-CASA`. The code alone is not unique across States: the United
-/// Kingdom and New Zealand each have a "CAA". It keys an entry's sections.
+/// Kingdom and New Zealand each have a "CAA". It keys a record's
+/// authority-specific information.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AuthorityId {
     state: IssuingState,
