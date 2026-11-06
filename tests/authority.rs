@@ -9,9 +9,9 @@ use std::cell::Cell;
 use common::{flight, session};
 use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
-    run, AircraftDescription, AuthorityId, Classification, CurrencyResult, DateRange, Entry,
-    EntryAccumulator, Figure, LicensingAuthority, Logbook, Measure, Problem, Questions, Record,
-    Requirement, RequirementId, Subject, Total,
+    run, AircraftDescription, AuthorityId, AuthoritySpecificInformation, Classification,
+    CurrencyResult, DateRange, Entry, EntryAccumulator, Figure, LicensingAuthority, Logbook,
+    Measure, Problem, Questions, Record, Requirement, RequirementId, Subject, Total,
 };
 use time::Date;
 
@@ -52,7 +52,7 @@ impl LicensingAuthority for FlightsOnly {
         Questions::new(1, Vec::new())
     }
 
-    fn problems_for(&self, _: Record) -> Vec<Problem> {
+    fn problems_for(&self, _: Record, _: &AuthoritySpecificInformation) -> Vec<Problem> {
         Vec::new()
     }
 }

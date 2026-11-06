@@ -21,7 +21,9 @@ pub mod window;
 use icao_shared_kernel::FlightDuration;
 use time::Date;
 
-use crate::entry::{AircraftDescription, AuthorityId, Entry, Logbook, Record};
+use crate::entry::{
+    AircraftDescription, AuthorityId, AuthoritySpecificInformation, Entry, Logbook, Record,
+};
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
@@ -66,24 +68,35 @@ pub trait LicensingAuthority {
     /// nothing to ask about a kind of record returns no questions for it.
     fn questions_for(&self, record: Record) -> Questions;
 
-    /// The problems with the authority's information on `record`
-    /// ([`Record::information_for`] its [`id`]), each at a question or at
-    /// the information as a whole ([`ProblemAt`]): a missing or unsupported
-    /// version is reported at the information as a whole. The host has
-    /// removed the answers to hidden questions first
-    /// ([`Questions::drop_hidden_answers_for`]), and
-    /// [`Questions::required_unanswered_for`] lists the required questions
-    /// left unanswered. An authority that asks nothing about a kind of
-    /// record returns no questions for it, and so reports no problem at a
-    /// question. The information's version is as it was stored
+    /// The problems with `information`, the authority's information on
+    /// `record`, each at a question or at the information as a whole
+    /// ([`ProblemAt`]): a missing or unsupported version is reported at the
+    /// information as a whole. The record gives the context (an entry's
+    /// capacity, say); the information is what is checked, and is the one
+    /// passed, not the record's own.
+    ///
+    /// The host saves a record's information in this order: it finds the
+    /// stored information ([`Record::information_for`] the authority's
+    /// [`id`]) or starts new; it removes the answers to hidden questions
+    /// ([`Questions::drop_hidden_answers_for`]); it asks for the problems
+    /// with what is left, here, and for the required questions left
+    /// unanswered ([`Questions::required_unanswered_for`]); and, unless a
+    /// problem is a refusal, it writes the version ([`Questions::stamp`]) and
+    /// saves. So the information's version is as it was stored
     /// ([`AuthoritySpecificInformation::version`]): `None` for information
-    /// not saved yet, since the host writes the version only after this, as
-    /// it saves the information ([`Questions::stamp`]).
+    /// not saved yet.
+    ///
+    /// An authority that asks nothing about a kind of record returns no
+    /// questions for it, and so reports no problem at a question.
     ///
     /// [`AuthoritySpecificInformation::version`]: crate::entry::AuthoritySpecificInformation::version
     /// [`Record::information_for`]: crate::entry::Record::information_for
     /// [`id`]: LicensingAuthority::id
-    fn problems_for(&self, record: Record) -> Vec<Problem>;
+    fn problems_for(
+        &self,
+        record: Record,
+        information: &AuthoritySpecificInformation,
+    ) -> Vec<Problem>;
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation
