@@ -31,7 +31,7 @@ What it holds, in two modules:
   rules, the flight time and night, the capacity in which the pilot flew,
   instrument time, approaches, take-offs and landings); an authority's section of it, which
   is the authority's and holds the answers to its form, each under its
-  question's key, and the version of that form under the key `version`, which
+  question's key, and the version of that form under the key `_version`, which
   is reserved: no question may use it; and the neutral description of an aircraft type
   that an authority classifies, which is
   [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,

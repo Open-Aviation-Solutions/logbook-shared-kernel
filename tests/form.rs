@@ -297,12 +297,12 @@ fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
         "route": "operator",
         "receiving_flight_training": false,
         "other": 1,
-        "version": 1
+        "_version": 1
     }));
     form.retain_shown(&entry, &mut section);
     assert_eq!(
         section.value(),
-        &json!({"route": "operator", "other": 1, "version": 1})
+        &json!({"route": "operator", "other": 1, "_version": 1})
     );
 }
 
@@ -340,9 +340,12 @@ fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_ans
 fn the_forms_version_is_stored_with_the_answers_and_read_back() {
     let mut form = casa_picus();
     form.version = 2;
-    let mut section = Section::new(json!({"route": "operator", "version": 1}));
+    let mut section = Section::new(json!({"route": "operator", "_version": 1}));
     form.stamp(&mut section);
-    assert_eq!(section.value(), &json!({"route": "operator", "version": 2}));
+    assert_eq!(
+        section.value(),
+        &json!({"route": "operator", "_version": 2})
+    );
     assert_eq!(section.version(), Some(2));
 }
 
@@ -350,17 +353,17 @@ fn the_forms_version_is_stored_with_the_answers_and_read_back() {
 fn stamping_a_null_section_gives_it_only_the_version() {
     let mut section = Section::new(Value::Null);
     casa_picus().stamp(&mut section);
-    assert_eq!(section.value(), &json!({"version": 1}));
+    assert_eq!(section.value(), &json!({"_version": 1}));
 }
 
 #[test]
 fn a_section_without_a_whole_number_under_the_key_has_no_version() {
     for value in [
         json!({}),
-        json!({"version": "1"}),
-        json!({"version": 1.5}),
-        json!({"version": -1}),
-        json!({"version": u64::from(u32::MAX) + 1}),
+        json!({"_version": "1"}),
+        json!({"_version": 1.5}),
+        json!({"_version": -1}),
+        json!({"_version": u64::from(u32::MAX) + 1}),
         json!([1]),
     ] {
         assert_eq!(Section::new(value.clone()).version(), None, "{value}");

@@ -22,7 +22,7 @@ pub struct Section(serde_json::Value);
 impl Section {
     /// The key the section's version is stored under, as a JSON number. It
     /// is reserved: no question may use it.
-    pub const VERSION_KEY: &'static str = "version";
+    pub const VERSION_KEY: &'static str = "_version";
 
     pub fn new(value: serde_json::Value) -> Self {
         Self(value)
