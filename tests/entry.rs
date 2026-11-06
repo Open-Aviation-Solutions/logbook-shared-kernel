@@ -285,8 +285,13 @@ fn every_rule_broken_is_reported() {
 }
 
 #[test]
-fn an_approach_holds_its_procedure_and_aerodrome() {
-    let approach = Approach::new(ApproachType::Ils, LocationIndicator::parse("YSBK").unwrap());
-    assert_eq!(approach.procedure(), ApproachType::Ils);
-    assert_eq!(*approach.aerodrome(), "YSBK");
+fn an_approach_holds_its_procedure_aerodrome_and_whether_it_circled() {
+    let aerodrome = LocationIndicator::parse("YSBK").unwrap();
+    let straight_in = Approach::new(ApproachType::Ils, aerodrome.clone(), false);
+    let circled = Approach::new(ApproachType::Ils, aerodrome, true);
+    assert_eq!(circled.procedure(), ApproachType::Ils);
+    assert_eq!(*circled.aerodrome(), "YSBK");
+    assert!(circled.circled());
+    assert!(!straight_in.circled());
+    assert_ne!(straight_in, circled);
 }
