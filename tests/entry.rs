@@ -295,3 +295,18 @@ fn an_approach_holds_its_procedure_aerodrome_and_whether_it_circled() {
     assert!(!straight_in.circled());
     assert_ne!(straight_in, circled);
 }
+
+#[test]
+fn an_approach_is_built_from_the_re_exported_approach_types() {
+    use logbook_shared_kernel::{ApproachType, RnpApchMinima};
+    let approach = Approach::new(
+        ApproachType::RnpApch {
+            minima: RnpApchMinima::Lpv,
+        },
+        LocationIndicator::parse("YSBK").unwrap(),
+        false,
+    );
+    // A 3D procedure, flown without circling.
+    assert!(approach.procedure().is_3d());
+    assert!(!approach.circled());
+}

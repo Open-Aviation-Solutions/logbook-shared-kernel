@@ -12,7 +12,7 @@ an authority supplies its own.
 It is for developers of logbook software who want a State's rules to be
 supplied to the logbook, not built into it. It is written first for the
 [Open Aviation Solutions](https://github.com/Open-Aviation-Solutions) tools:
-[pilot-logbook](https://github.com/Open-Aviation-Solutions/pilot-logbook) uses
+[pilot-logbook](https://github.com/Open-Aviation-Solutions/pilot-logbook) is to use
 it, and [au-casa](https://github.com/Open-Aviation-Solutions/au-casa)
 implements it for CASA, Australia's authority. The design is recorded in
 pilot-logbook's
@@ -20,7 +20,7 @@ pilot-logbook's
 
 ## Status
 
-Written, and not yet released: its first release is to be `0.1.0`. Until `1.0`
+Written, and released on crates.io (its page says which version). Until `1.0`
 a breaking release is a minor version, so take it by a caret range, as
 [`INSTRUCTIONS.md`, "Consumers"](INSTRUCTIONS.md#consumers) sets out.
 

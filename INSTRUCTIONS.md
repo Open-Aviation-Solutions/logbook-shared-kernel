@@ -63,7 +63,10 @@ settled), and any user interface.
   own (ADR 0001's, and those agreed on #1); a rule of one State's, or of how
   the app records names, stays out.
 - **No serde derives**: the stored spelling of an entry is the app's, and
-  authority-specific information is stored as the authority gives it.
+  authority-specific information is stored as the authority gives it. The
+  re-exported `ApproachType` and `RnpApchMinima` carry `icao-shared-kernel`'s
+  serde derives, but a host maps their spelling itself and does not store
+  through them.
 
 ## Dependencies
 
