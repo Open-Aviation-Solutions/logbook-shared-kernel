@@ -2,10 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! An authority's section of an entry.
+//! An authority's section of a record, an entry or an assessment.
 
-/// What one authority adds to or narrows in the common part of an entry,
-/// stored as the authority gives it. It is the authority's: the host stores
+/// What one authority adds to a record (an entry or an assessment), or
+/// narrows in an entry's common part, stored as the authority gives it. It is the authority's: the host stores
 /// in it the answers to the authority's form, each under its question's key
 /// (a JSON object, in the shapes [`Answer`](crate::authority::Answer)
 /// describes), and [`Form`](crate::authority::Form) reads those answers to

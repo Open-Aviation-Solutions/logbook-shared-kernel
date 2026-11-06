@@ -7,9 +7,11 @@
 
 mod common;
 
-use common::{assessment, flight};
+use common::{assessment, flight, flight_parts};
 use icao_shared_kernel::Capacity;
-use logbook_shared_kernel::{Answer, Choice, Condition, Form, Question, Record, Section};
+use logbook_shared_kernel::{
+    Answer, AuthorityId, Choice, Condition, Entry, Form, Question, Record, Section,
+};
 use serde_json::{json, Value};
 
 /// CASA's pilot in command under supervision (CASR 1998 reg 61.095), as the
@@ -426,4 +428,22 @@ fn an_assessments_answers_show_remove_and_leave_unanswered_as_an_entrys_do() {
     assert_eq!(section.value(), &json!({"first": false}));
     let section = Section::new(json!({"first": true}));
     assert_eq!(keys(form.unanswered(record, Some(&section))), ["second"]);
+}
+
+#[test]
+fn a_records_section_is_the_authoritys_own() {
+    let authority = AuthorityId::new("XX", "TEST").unwrap();
+    let other = AuthorityId::new("YY", "TEST").unwrap();
+    let section = Section::new(json!({"first": true}));
+    let mut parts = flight_parts("e", Capacity::PilotInCommand);
+    parts.sections.insert(authority.clone(), section.clone());
+    let entry = Entry::new(parts).unwrap();
+    let mut assessment = assessment("a");
+    assessment
+        .sections
+        .insert(authority.clone(), section.clone());
+    for record in [Record::Entry(&entry), Record::Assessment(&assessment)] {
+        assert_eq!(record.section(&authority), Some(&section));
+        assert_eq!(record.section(&other), None);
+    }
 }

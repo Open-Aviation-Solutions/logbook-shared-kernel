@@ -4,7 +4,7 @@
 
 //! What an authority's section is about.
 
-use super::{Assessment, Entry};
+use super::{Assessment, AuthorityId, Entry, Section};
 
 /// A record in the logbook that holds an authority's section: what the
 /// section, and the authority's form for it, are about. The host says which
@@ -13,4 +13,14 @@ use super::{Assessment, Entry};
 pub enum Record<'a> {
     Entry(&'a Entry),
     Assessment(&'a Assessment),
+}
+
+impl<'a> Record<'a> {
+    /// `authority`'s section of the record, if it has one.
+    pub fn section(&self, authority: &AuthorityId) -> Option<&'a Section> {
+        match self {
+            Self::Entry(entry) => entry.sections().get(authority),
+            Self::Assessment(assessment) => assessment.sections.get(authority),
+        }
+    }
 }

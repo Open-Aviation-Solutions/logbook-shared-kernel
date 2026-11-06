@@ -39,9 +39,9 @@ What it holds, in two modules:
 - **`authority`**: the trait an authority implements (whether an entry counts
   under its rules, what an aircraft type counts as, its requirements and
   their currency, the questions it asks about an entry or an assessment and
-  the problems with its answers); the machinery its currency checks are written over; and the
-  form description, in which it asks those questions as data for the host to
-  show.
+  the problems with its answers); the machinery its currency checks are
+  written over; and the form description, in which it asks those questions as
+  data for the host to show.
 
 What it does not hold:
 

@@ -73,8 +73,8 @@ pub trait LicensingAuthority {
     /// which section each problem is in. The host has removed the answers
     /// to hidden questions first ([`Form::retain_shown`]), and
     /// [`Form::unanswered`] lists the required questions left unanswered.
-    /// An authority that asks nothing about a kind of record accepts any
-    /// section of it, and returns no problems.
+    /// An authority that asks nothing about a kind of record gives it a
+    /// form with no questions, and so reports no problem at a question.
     /// The section's version is as it was stored ([`Section::version`]):
     /// `None` for a section not saved yet, since the host writes the form's
     /// version only after this, as it saves the section ([`Form::stamp`]).
@@ -140,14 +140,15 @@ pub enum ProblemAt {
     Section,
 }
 
-/// Whether a problem stops the entry being saved.
+/// Whether a problem stops the record (an entry or an assessment) being
+/// saved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProblemKind {
     /// The authority cannot accept the section: it contradicts itself, or
-    /// its version is missing or unsupported. The entry is not saved.
+    /// its version is missing or unsupported. The record is not saved.
     Refusal,
     /// The section says what the authority's conditions do not support. The
-    /// entry is the pilot's claim, so it is saved, and the host shows the
+    /// record is the pilot's claim, so it is saved, and the host shows the
     /// warning.
     Warning,
 }

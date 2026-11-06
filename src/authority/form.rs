@@ -26,7 +26,9 @@ pub struct Form {
     /// changes it with each breaking change to the section, which ships
     /// with a migration of the stored sections. The host stores it with the
     /// answers ([`Form::stamp`]), and the authority reads it back from a
-    /// stored section ([`Section::version`]).
+    /// stored section ([`Section::version`]). Each form carries its own, so
+    /// an authority's sections of entries and of assessments are versioned
+    /// independently.
     pub version: u32,
     /// No question's key may be [`Section::VERSION_KEY`]. Nothing checks a
     /// form for this.
