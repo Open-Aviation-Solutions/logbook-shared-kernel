@@ -14,15 +14,20 @@ The crate holds, in one crate and two modules (split only if something
 wants the records without the interface):
 
 - **`entry`**: the logbook's common entry, the pilot's claim in ICAO's terms
-  (taken from `icao-shared-kernel`); an authority's section of it, stored as
-  the authority gives it, holding the answers to its form under each
-  question's key (which the form reads to decide what is shown); and the neutral
-  description of an aircraft type.
-- **`authority`**: the trait an authority implements to supply its rules; the
+  (taken from `icao-shared-kernel`); an authority's information on it or on
+  an assessment (`AuthoritySpecificInformation`), stored as the authority
+  gives it, holding the answers to its questions under each question's key
+  (which `Questions` reads to decide what is shown), and the questions'
+  version under the reserved key `_version`
+  (`AuthoritySpecificInformation::VERSION_KEY`), which no question may use;
+  and the neutral description of an aircraft type.
+- **`authority`**: the trait an authority implements to supply its rules,
+  one object for each authority (`LicensingAuthority::id`); the
   accumulator and check traits, the event window and `CurrencyResult`, so
   each authority writes its currency checks over the same machinery; and the
-  form description, in which an authority asks its questions about an entry
-  as data, with no dependence on a user interface.
+  description of its questions (`Questions`), in which an authority asks
+  about an entry or an assessment (a `Record`) as data, with no dependence on
+  a user interface.
 
 The neutral description of an aircraft type is `aircraft-type-descriptions`'s
 `AircraftDescription`, re-exported from `entry`; this crate defines none of
@@ -31,7 +36,11 @@ it, are on [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel
 
 Out of scope (do not add here): any one State's rules, names or regulations
 (CASA's are au-casa's), ICAO's terms themselves (`icao-shared-kernel`'s),
-storage and stored formats (the application's), and any user interface.
+storage and stored formats (the application's; the one exception is the
+reserved key the version of an authority's information is stored under,
+which is this crate's, as
+[#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
+settled), and any user interface.
 
 ## Conventions
 
@@ -53,11 +62,11 @@ storage and stored formats (the application's), and any user interface.
   which answers every rule its parts break. The rules are the common part's
   own (ADR 0001's, and those agreed on #1); a rule of one State's, or of how
   the app records names, stays out.
-- **No serde derives**: the stored spelling of an entry is the app's, and a
-  section is stored as the authority gives it. The re-exported
-  `ApproachType` and `RnpApchMinima` carry `icao-shared-kernel`'s serde
-  derives, but a host maps their spelling itself and does not store through
-  them.
+- **No serde derives**: the stored spelling of an entry is the app's, and
+  authority-specific information is stored as the authority gives it. The
+  re-exported `ApproachType` and `RnpApchMinima` carry `icao-shared-kernel`'s
+  serde derives, but a host maps their spelling itself and does not store
+  through them.
 
 ## Dependencies
 

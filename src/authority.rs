@@ -5,7 +5,8 @@
 //! The interface through which a licensing authority supplies its rules to
 //! the logbook, and what those rules are written over: the accumulators that
 //! fold a logbook into a result in one pass, the currency checks and their
-//! event window, the totals, and the form description.
+//! event window, the totals, and the description of an authority's
+//! questions.
 //!
 //! Every name, label and text an authority fills in here is its own, in its
 //! regulation's words: only the authority knows them.
@@ -13,33 +14,37 @@
 mod accumulator;
 mod currency;
 mod event_window;
-mod form;
+mod questions;
 mod totals;
 pub mod window;
 
 use icao_shared_kernel::FlightDuration;
 use time::Date;
 
-use crate::entry::{AircraftDescription, AuthorityId, Entry, Logbook};
+use crate::entry::{
+    AircraftDescription, AuthorityId, AuthoritySpecificInformation, Entry, Logbook, Record,
+};
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
 pub use event_window::EventWindow;
-pub use form::{Answer, Choice, Condition, Form, Question};
+pub use questions::{Answer, Choice, Condition, Question, Questions};
 pub use totals::{DateRange, Measure, Total};
 
-/// A licensing authority's rules, as the logbook calls them.
+/// A licensing authority's rules, as the logbook calls them, for one
+/// authority.
 ///
 /// Object-safe, so a host holds `Box<dyn LicensingAuthority>`, one for each
-/// authority the pilot holds a licence from, found by [`authorities`]. That
-/// is why a section crosses this interface as JSON and not as an associated
-/// type.
+/// authority the pilot holds a licence from, found by [`id`]. That is why
+/// authority-specific information crosses this interface as JSON and not as
+/// an associated type. Rules that several authorities issue are built once
+/// for each authority, each object holding its authority's id.
 ///
-/// [`authorities`]: LicensingAuthority::authorities
+/// [`id`]: LicensingAuthority::id
 pub trait LicensingAuthority {
-    /// The authorities whose licences these rules serve: one, or several
-    /// when one State's rules are issued by several authorities.
-    fn authorities(&self) -> &[AuthorityId];
+    /// The authority whose licences these rules serve, and whose
+    /// information on a record they read and check.
+    fn id(&self) -> &AuthorityId;
 
     /// Whether an entry counts under these rules at all. [`run`] applies it
     /// once, before any accumulator sees an entry.
@@ -58,20 +63,40 @@ pub trait LicensingAuthority {
     /// The authority's own totals of the entries dated in `range`.
     fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<Figure>;
 
-    /// The questions `authority`, one of [`authorities`], asks about an
-    /// entry for its section, given the entry's common part.
-    ///
-    /// [`authorities`]: LicensingAuthority::authorities
-    fn section_form(&self, authority: &AuthorityId, entry: &Entry) -> Form;
+    /// The questions the authority asks for its information on `record`,
+    /// an entry or an assessment, given the record. An authority with
+    /// nothing to ask about a kind of record returns no questions for it.
+    fn questions_for(&self, record: Record) -> Questions;
 
-    /// The problems with `authority`'s section of an entry, each at a
-    /// question. `authority` is one of [`authorities`], so the host knows
-    /// which section each problem is in. The host has removed the answers
-    /// to hidden questions first ([`Form::retain_shown`]), and
-    /// [`Form::unanswered`] lists the required questions left unanswered.
+    /// The problems with `information`, the authority's information on
+    /// `record`, each at a question or at the information as a whole
+    /// ([`ProblemAt`]): a missing or unsupported version is reported at the
+    /// information as a whole. The record gives the context (an entry's
+    /// capacity, say); the information is what is checked, and is the one
+    /// passed, not the record's own.
     ///
-    /// [`authorities`]: LicensingAuthority::authorities
-    fn validate_section(&self, authority: &AuthorityId, entry: &Entry) -> Vec<Problem>;
+    /// The host saves a record's information in this order: it finds the
+    /// stored information ([`Record::information_for`] the authority's
+    /// [`id`]) or starts new; it removes the answers to hidden questions
+    /// ([`Questions::drop_hidden_answers_for`]); it asks for the problems
+    /// with what is left, here, and for the required questions left
+    /// unanswered ([`Questions::required_unanswered_for`]); and, unless a
+    /// problem is a refusal, it writes the version ([`Questions::stamp`]) and
+    /// saves. So the information's version is as it was stored
+    /// ([`AuthoritySpecificInformation::version`]): `None` for information
+    /// not saved yet.
+    ///
+    /// An authority that asks nothing about a kind of record returns no
+    /// questions for it, and so reports no problem at a question.
+    ///
+    /// [`AuthoritySpecificInformation::version`]: crate::entry::AuthoritySpecificInformation::version
+    /// [`Record::information_for`]: crate::entry::Record::information_for
+    /// [`id`]: LicensingAuthority::id
+    fn problems_for(
+        &self,
+        record: Record,
+        information: &AuthoritySpecificInformation,
+    ) -> Vec<Problem>;
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation
@@ -108,24 +133,39 @@ pub struct Classification {
     pub cautions: Vec<String>,
 }
 
-/// A problem with an authority's section of an entry.
+/// A problem with an authority's information on a record.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Problem {
-    /// The question it is reported at ([`Question::key`]).
-    pub key: &'static str,
+    pub at: ProblemAt,
     pub kind: ProblemKind,
     pub text: String,
     pub regulation: &'static str,
 }
 
-/// Whether a problem stops the entry being saved.
+/// Where in the authority-specific information a problem is reported, for
+/// the host to show it there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ProblemAt {
+    /// At the question with this key ([`Question::key`]).
+    Question(&'static str),
+    /// At the information as a whole, such as a missing or unsupported
+    /// version ([`AuthoritySpecificInformation::version`]). The host shows it
+    /// at the top of the authority's questions.
+    ///
+    /// [`AuthoritySpecificInformation::version`]: crate::entry::AuthoritySpecificInformation::version
+    Information,
+}
+
+/// Whether a problem stops the record (an entry or an assessment) being
+/// saved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProblemKind {
-    /// The section contradicts itself, and the entry is not saved.
+    /// The authority cannot accept the information: it contradicts itself,
+    /// or its version is missing or unsupported. The record is not saved.
     Refusal,
-    /// The section says what the authority's conditions do not support. The
-    /// entry is the pilot's claim, so it is saved, and the host shows the
-    /// warning.
+    /// The information says what the authority's conditions do not
+    /// support. The record is the pilot's claim, so it is saved, and the
+    /// host shows the warning.
     Warning,
 }
 

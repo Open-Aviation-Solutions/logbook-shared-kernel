@@ -3,16 +3,17 @@
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 //! The logbook's common entry: the pilot's claim about a flight or a
-//! session, in the terms ICAO's Annex 1 defines, with a section for each
-//! authority whose rules the pilot logs it under.
+//! session, in the terms ICAO's Annex 1 defines, with the authority-specific
+//! information of each authority whose rules the pilot logs it under.
 
 mod approach;
 mod authority_id;
+mod authority_specific_information;
 mod day_night;
 mod instrument_time;
 mod logbook;
+mod record;
 mod route;
-mod section;
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -24,12 +25,13 @@ use uuid::Uuid;
 pub use aircraft_type_descriptions::AircraftDescription;
 pub use approach::Approach;
 pub use authority_id::AuthorityId;
+pub use authority_specific_information::AuthoritySpecificInformation;
 pub use day_night::DayNight;
 pub use icao_shared_kernel::{ApproachType, RnpApchMinima};
 pub use instrument_time::InstrumentTime;
 pub use logbook::{Assessment, AssessmentId, Logbook};
+pub use record::Record;
 pub use route::Route;
-pub use section::Section;
 
 /// Identifies an entry. Opaque: a check only compares and reports it, and
 /// the host maps it back to whatever it holds.
@@ -94,11 +96,11 @@ pub struct EntryParts {
     pub approaches: Vec<Approach>,
     pub take_offs: DayNight<u32>,
     pub landings: DayNight<u32>,
-    pub sections: BTreeMap<AuthorityId, Section>,
+    pub authority_information: BTreeMap<AuthorityId, AuthoritySpecificInformation>,
 }
 
 /// A logbook entry: the pilot's claim, in ICAO's terms, and each
-/// authority's section of it. Built only through [`Entry::new`], so an
+/// authority's information on it. Built only through [`Entry::new`], so an
 /// entry holds its rules.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Entry {
@@ -250,9 +252,9 @@ impl Entry {
         self.parts.landings
     }
 
-    /// Each authority's section, keyed by the authority.
-    pub fn sections(&self) -> &BTreeMap<AuthorityId, Section> {
-        &self.parts.sections
+    /// Each authority's information on the entry, keyed by the authority.
+    pub fn authority_information(&self) -> &BTreeMap<AuthorityId, AuthoritySpecificInformation> {
+        &self.parts.authority_information
     }
 }
 

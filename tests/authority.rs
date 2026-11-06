@@ -9,22 +9,22 @@ use std::cell::Cell;
 use common::{flight, session};
 use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
-    run, AircraftDescription, AuthorityId, Classification, CurrencyResult, DateRange, Entry,
-    EntryAccumulator, Figure, Form, LicensingAuthority, Logbook, Measure, Problem, Requirement,
-    RequirementId, Subject, Total,
+    run, AircraftDescription, AuthorityId, AuthoritySpecificInformation, Classification,
+    CurrencyResult, DateRange, Entry, EntryAccumulator, Figure, LicensingAuthority, Logbook,
+    Measure, Problem, Questions, Record, Requirement, RequirementId, Subject, Total,
 };
 use time::Date;
 
 /// An authority with no State's rules, whose only rule is that a session
 /// does not count. It counts how often it is asked.
 struct FlightsOnly {
-    authorities: Vec<AuthorityId>,
+    id: AuthorityId,
     asked: Cell<usize>,
 }
 
 impl LicensingAuthority for FlightsOnly {
-    fn authorities(&self) -> &[AuthorityId] {
-        &self.authorities
+    fn id(&self) -> &AuthorityId {
+        &self.id
     }
 
     fn counts(&self, entry: &Entry) -> bool {
@@ -48,13 +48,11 @@ impl LicensingAuthority for FlightsOnly {
         Vec::new()
     }
 
-    fn section_form(&self, _: &AuthorityId, _: &Entry) -> Form {
-        Form {
-            questions: Vec::new(),
-        }
+    fn questions_for(&self, _: Record) -> Questions {
+        Questions::new(1, Vec::new())
     }
 
-    fn validate_section(&self, _: &AuthorityId, _: &Entry) -> Vec<Problem> {
+    fn problems_for(&self, _: Record, _: &AuthoritySpecificInformation) -> Vec<Problem> {
         Vec::new()
     }
 }
@@ -80,7 +78,7 @@ impl Measure for PicTime {
 
 fn flights_only() -> FlightsOnly {
     FlightsOnly {
-        authorities: vec![AuthorityId::new("XX", "TEST").unwrap()],
+        id: AuthorityId::new("XX", "TEST").unwrap(),
         asked: Cell::new(0),
     }
 }
@@ -91,7 +89,7 @@ fn authority() -> Box<dyn LicensingAuthority> {
 
 #[test]
 fn an_authority_is_held_as_a_trait_object() {
-    assert_eq!(authority().authorities()[0].to_string(), "XX-TEST");
+    assert_eq!(authority().id().to_string(), "XX-TEST");
 }
 
 #[test]

@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 use time::Date;
 use uuid::Uuid;
 
-use super::{AuthorityId, Entry, Section};
+use super::{AuthorityId, AuthoritySpecificInformation, Entry};
 
 /// Identifies an assessment. Opaque, as [`EntryId`](super::EntryId) is.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -27,7 +27,7 @@ impl AssessmentId {
 
 /// An assessment of the pilot (a flight test, review or check) conducted on
 /// a flight. What kind it was, its outcome and its purpose are each
-/// authority's, in its section.
+/// authority's, in its authority-specific information.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assessment {
     pub id: AssessmentId,
@@ -35,7 +35,7 @@ pub struct Assessment {
     pub date: Date,
     /// The kernel's `Flight` it was conducted on.
     pub flight: Uuid,
-    pub sections: BTreeMap<AuthorityId, Section>,
+    pub authority_information: BTreeMap<AuthorityId, AuthoritySpecificInformation>,
 }
 
 /// A pilot's entries and assessments.

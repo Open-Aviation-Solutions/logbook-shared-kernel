@@ -186,7 +186,7 @@ mod tests {
             approaches: Vec::new(),
             take_offs: DayNight::default(),
             landings: DayNight::default(),
-            sections: BTreeMap::new(),
+            authority_information: BTreeMap::new(),
         })
         .unwrap()
     }
@@ -196,7 +196,7 @@ mod tests {
             id: AssessmentId::new(id),
             date: on,
             flight: Uuid::nil(),
-            sections: BTreeMap::new(),
+            authority_information: BTreeMap::new(),
         }
     }
 

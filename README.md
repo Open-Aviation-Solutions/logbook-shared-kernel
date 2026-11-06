@@ -29,18 +29,21 @@ What it holds, in two modules:
 - **`entry`**: the logbook's common entry, in ICAO's terms (the date, the
   aircraft or the flight simulation training device, the route, the flight
   rules, the flight time and night, the capacity in which the pilot flew,
-  instrument time, approaches, take-offs and landings); an authority's section of it, which
-  is the authority's and holds the answers to its form, each under its
-  question's key; and the neutral description of an aircraft type
-  that an authority classifies, which is
+  instrument time, approaches, take-offs and landings); an authority's own
+  information on it or on an assessment, which holds the answers to the
+  authority's questions, each under its question's key, and their version
+  under the key `_version`, which is reserved: no question may use it; and the
+  neutral description of an aircraft type that an authority classifies, which
+  is
   [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,
   re-exported.
-- **`authority`**: the trait an authority implements (whether an entry counts
-  under its rules, what an aircraft type counts as, its requirements and
-  their currency, the questions it asks about an entry and the problems with
-  its answers); the machinery its currency checks are written over; and the
-  form description, in which it asks those questions as data for the host to
-  show.
+- **`authority`**: the trait an authority implements, one implementation
+  built once (one object) for each authority it serves (whether an entry
+  counts under its rules, what an aircraft type counts as, its requirements
+  and their currency, the questions it asks about an entry or an assessment
+  and the problems with its answers); the machinery its currency checks are
+  written over; and the description of those questions, as data for the host
+  to show.
 
 What it does not hold:
 
@@ -49,8 +52,8 @@ What it does not hold:
   which this crate depends on.
 - Storage: no repositories, databases or file formats. How an entry is
   stored is the application's.
-- A user interface. The form description says what to ask, not how to show
-  it.
+- A user interface. The description of the questions says what to ask, not
+  how to show it.
 
 ## What it is not
 
