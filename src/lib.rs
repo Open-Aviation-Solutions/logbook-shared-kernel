@@ -22,8 +22,8 @@ pub mod entry;
 pub use authority::{
     run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
     Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
-    EntryAccumulator, EventWindow, Figure, Form, LicensingAuthority, Measure, Problem, ProblemKind,
-    Question, Requirement, RequirementId, Total,
+    EntryAccumulator, EventWindow, Figure, Form, LicensingAuthority, Measure, Problem, ProblemAt,
+    ProblemKind, Question, Requirement, RequirementId, Total,
 };
 
 pub use entry::{
