@@ -2,29 +2,33 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-//! The form description, tested with pilot-logbook's ADR 0001's two cases.
-//! Each form is a fixture here only: this crate holds no State's rules.
+//! An authority's questions, tested with pilot-logbook's ADR 0001's two
+//! cases. Each set of questions is a fixture here only: this crate holds no
+//! State's rules.
 
 mod common;
 
-use common::flight;
+use common::{assessment, flight, flight_parts};
 use icao_shared_kernel::Capacity;
-use logbook_shared_kernel::{Answer, Choice, Condition, Form, Question, Section};
+use logbook_shared_kernel::{
+    Answer, AuthorityId, AuthoritySpecificInformation, Choice, Condition, Entry, Question,
+    Questions, Record,
+};
 use serde_json::{json, Value};
 
 /// CASA's pilot in command under supervision (CASR 1998 reg 61.095), as the
-/// ADR describes its section. The ADR gives the choices' labels; the
+/// ADR describes its information. The ADR gives the choices' labels; the
 /// questions' are words of reg 61.095(2)(b) and (3)(b). No label is
 /// asserted.
-fn casa_picus() -> Form {
+fn casa_picus() -> Questions {
     let picus = || {
         Some(Condition::Capacity(
             Capacity::PilotInCommandUnderSupervision,
         ))
     };
-    Form {
-        version: 1,
-        questions: vec![
+    Questions::new(
+        1,
+        vec![
             Question {
                 key: "route",
                 label: "The supervision of the person".into(),
@@ -64,15 +68,15 @@ fn casa_picus() -> Form {
                 required: true,
             },
         ],
-    }
+    )
 }
 
 /// EASA's pilot-in-command under supervision (FCL.010; AMC1 FCL.050),
 /// written only to test the description, and not built.
-fn easa_picus() -> Form {
-    Form {
-        version: 1,
-        questions: vec![Question {
+fn easa_picus() -> Questions {
+    Questions::new(
+        1,
+        vec![Question {
             key: "countersigned_by",
             label: "Countersigned by the PIC".into(),
             regulation: "AMC1 FCL.050(b)(1)(v), (b)(5)",
@@ -82,14 +86,19 @@ fn easa_picus() -> Form {
             )),
             required: true,
         }],
-    }
+    )
 }
 
 /// The keys of the questions shown for an entry flown in `capacity`.
-fn shown(form: &Form, capacity: Capacity, section: Option<Value>) -> Vec<&'static str> {
+fn shown(
+    questions: &Questions,
+    capacity: Capacity,
+    information: Option<Value>,
+) -> Vec<&'static str> {
     let entry = flight("e", capacity);
-    let section = section.map(Section::new);
-    form.shown(&entry, section.as_ref())
+    let information = information.map(AuthoritySpecificInformation::new);
+    questions
+        .shown_for(Record::Entry(&entry), information.as_ref())
         .into_iter()
         .map(|question| question.key)
         .collect()
@@ -98,17 +107,17 @@ fn shown(form: &Form, capacity: Capacity, section: Option<Value>) -> Vec<&'stati
 const PICUS: Capacity = Capacity::PilotInCommandUnderSupervision;
 
 #[test]
-fn casas_form_is_not_shown_for_a_pilot_in_command() {
+fn casas_questions_are_not_shown_for_a_pilot_in_command() {
     assert!(shown(&casa_picus(), Capacity::PilotInCommand, None).is_empty());
 }
 
 #[test]
-fn casas_form_asks_the_route_first() {
+fn casas_questions_ask_the_route_first() {
     assert_eq!(shown(&casa_picus(), PICUS, None), ["route"]);
 }
 
 #[test]
-fn casas_form_asks_about_flight_training_only_on_the_instructor_route() {
+fn casas_questions_ask_about_flight_training_only_on_the_instructor_route() {
     assert_eq!(
         shown(&casa_picus(), PICUS, Some(json!({"route": "instructor"}))),
         ["route", "receiving_flight_training"]
@@ -120,32 +129,32 @@ fn casas_form_asks_about_flight_training_only_on_the_instructor_route() {
 }
 
 #[test]
-fn the_adrs_section_answers_every_question_casa_shows() {
-    let section = json!({"route": "instructor", "receiving_flight_training": false});
-    let form = casa_picus();
-    assert_answers_every_question_shown(&form, PICUS, &section, 2);
+fn the_adrs_information_answers_every_question_casa_shows() {
+    let information = json!({"route": "instructor", "receiving_flight_training": false});
+    let questions = casa_picus();
+    assert_answers_every_question_shown(&questions, PICUS, &information, 2);
 }
 
 /// Each question shown, `count` of them, has an answer of its kind in
-/// `section`.
+/// `information`.
 fn assert_answers_every_question_shown(
-    form: &Form,
+    questions: &Questions,
     capacity: Capacity,
-    section: &Value,
+    information: &Value,
     count: usize,
 ) {
     let entry = flight("e", capacity);
-    let section = Section::new(section.clone());
-    let questions = form.shown(&entry, Some(&section));
-    assert_eq!(questions.len(), count);
-    for question in questions {
-        let answer = &section.value()[question.key];
+    let information = AuthoritySpecificInformation::new(information.clone());
+    let shown = questions.shown_for(Record::Entry(&entry), Some(&information));
+    assert_eq!(shown.len(), count);
+    for question in shown {
+        let answer = &information.value()[question.key];
         assert!(question.answer.accepts(answer), "{}", question.key);
     }
 }
 
 #[test]
-fn easas_form_is_shown_only_for_pilot_in_command_under_supervision() {
+fn easas_question_is_shown_only_for_pilot_in_command_under_supervision() {
     for capacity in [
         Capacity::PilotInCommand,
         Capacity::CoPilot,
@@ -161,8 +170,8 @@ fn easas_form_is_shown_only_for_pilot_in_command_under_supervision() {
 
 #[test]
 fn a_person_named_answers_easas_question() {
-    let section = json!({"countersigned_by": {"name": "A. Pilot"}});
-    assert_answers_every_question_shown(&easa_picus(), PICUS, &section, 1);
+    let information = json!({"countersigned_by": {"name": "A. Pilot"}});
+    assert_answers_every_question_shown(&easa_picus(), PICUS, &information, 1);
 }
 
 #[test]
@@ -231,9 +240,9 @@ fn an_answer_to_a_hidden_question_meets_no_condition() {
         shown_when: Some(shown_when),
         required: true,
     };
-    let form = Form {
-        version: 1,
-        questions: vec![
+    let questions = Questions::new(
+        1,
+        vec![
             question("first", Condition::Capacity(Capacity::PilotInCommand)),
             question(
                 "second",
@@ -243,20 +252,20 @@ fn an_answer_to_a_hidden_question_meets_no_condition() {
                 },
             ),
         ],
-    };
-    let section = Some(json!({"first": true}));
+    );
+    let information = Some(json!({"first": true}));
     assert_eq!(
-        shown(&form, Capacity::PilotInCommand, section.clone()),
+        shown(&questions, Capacity::PilotInCommand, information.clone()),
         ["first", "second"]
     );
-    assert!(shown(&form, PICUS, section).is_empty());
+    assert!(shown(&questions, PICUS, information).is_empty());
 }
 
 #[test]
 fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
-    let form = Form {
-        version: 1,
-        questions: vec![
+    let questions = Questions::new(
+        1,
+        vec![
             Question {
                 key: "first",
                 label: "First".into(),
@@ -277,42 +286,43 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
                 required: false,
             },
         ],
-    };
+    );
     let pic = Capacity::PilotInCommand;
     assert_eq!(
-        shown(&form, pic, Some(json!({"first": false}))),
+        shown(&questions, pic, Some(json!({"first": false}))),
         ["first", "second"]
     );
-    for section in [json!({"first": true}), json!({"first": "false"}), json!({})] {
-        assert_eq!(shown(&form, pic, Some(section)), ["first"]);
+    for information in [json!({"first": true}), json!({"first": "false"}), json!({})] {
+        assert_eq!(shown(&questions, pic, Some(information)), ["first"]);
     }
-    assert_eq!(shown(&form, pic, None), ["first"]);
+    assert_eq!(shown(&questions, pic, None), ["first"]);
 }
 
 #[test]
 fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
-    let form = casa_picus();
+    let questions = casa_picus();
     let entry = flight("e", PICUS);
-    let mut section = Section::new(json!({
+    let mut information = AuthoritySpecificInformation::new(json!({
         "route": "operator",
         "receiving_flight_training": false,
         "other": 1,
         "_version": 1
     }));
-    form.retain_shown(&entry, &mut section);
+    questions.drop_hidden_answers_for(Record::Entry(&entry), &mut information);
     assert_eq!(
-        section.value(),
+        information.value(),
         &json!({"route": "operator", "other": 1, "_version": 1})
     );
 }
 
 #[test]
-fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_answer() {
-    let form = casa_picus();
+fn the_required_unanswered_questions_are_those_shown_without_an_accepted_answer() {
+    let questions = casa_picus();
     let entry = flight("e", PICUS);
-    let unanswered = |section: Option<Value>| -> Vec<&'static str> {
-        let section = section.map(Section::new);
-        form.unanswered(&entry, section.as_ref())
+    let unanswered = |information: Option<Value>| -> Vec<&'static str> {
+        let information = information.map(AuthoritySpecificInformation::new);
+        questions
+            .required_unanswered_for(Record::Entry(&entry), information.as_ref())
             .into_iter()
             .map(|question| question.key)
             .collect()
@@ -337,27 +347,27 @@ fn the_unanswered_questions_are_those_shown_and_required_without_an_accepted_ans
 }
 
 #[test]
-fn the_forms_version_is_stored_with_the_answers_and_read_back() {
-    let mut form = casa_picus();
-    form.version = 2;
-    let mut section = Section::new(json!({"route": "operator", "_version": 1}));
-    form.stamp(&mut section);
+fn the_questions_version_is_stored_with_the_answers_and_read_back() {
+    let questions = Questions::new(2, Vec::new());
+    let mut information =
+        AuthoritySpecificInformation::new(json!({"route": "operator", "_version": 1}));
+    questions.stamp(&mut information);
     assert_eq!(
-        section.value(),
+        information.value(),
         &json!({"route": "operator", "_version": 2})
     );
-    assert_eq!(section.version(), Some(2));
+    assert_eq!(information.version(), Some(questions.version()));
 }
 
 #[test]
-fn stamping_a_null_section_gives_it_only_the_version() {
-    let mut section = Section::new(Value::Null);
-    casa_picus().stamp(&mut section);
-    assert_eq!(section.value(), &json!({"_version": 1}));
+fn stamping_null_information_gives_it_only_the_version() {
+    let mut information = AuthoritySpecificInformation::new(Value::Null);
+    casa_picus().stamp(&mut information);
+    assert_eq!(information.value(), &json!({"_version": 1}));
 }
 
 #[test]
-fn a_section_without_a_whole_number_under_the_key_has_no_version() {
+fn information_without_a_whole_number_under_the_key_has_no_version() {
     for value in [
         json!({}),
         json!({"_version": "1"}),
@@ -366,6 +376,96 @@ fn a_section_without_a_whole_number_under_the_key_has_no_version() {
         json!({"_version": u64::from(u32::MAX) + 1}),
         json!([1]),
     ] {
-        assert_eq!(Section::new(value.clone()).version(), None, "{value}");
+        assert_eq!(
+            AuthoritySpecificInformation::new(value.clone()).version(),
+            None,
+            "{value}"
+        );
+    }
+}
+
+/// Questions with one always shown, a follow-up on its answer, and one for
+/// a pilot in command.
+fn with_capacity_question() -> Questions {
+    let question = |key, shown_when| Question {
+        key,
+        label: key.into(),
+        regulation: "",
+        answer: Answer::YesNo,
+        shown_when,
+        required: true,
+    };
+    Questions::new(
+        1,
+        vec![
+            question("first", None),
+            question(
+                "second",
+                Some(Condition::Answer {
+                    key: "first",
+                    is: json!(true),
+                }),
+            ),
+            question("pic", Some(Condition::Capacity(Capacity::PilotInCommand))),
+        ],
+    )
+}
+
+#[test]
+fn a_capacity_condition_holds_only_for_an_entry() {
+    let questions = with_capacity_question();
+    let entry = flight("e", Capacity::PilotInCommand);
+    let assessment = assessment("a");
+    let keys = |record| -> Vec<&'static str> {
+        questions
+            .shown_for(record, None)
+            .into_iter()
+            .map(|question| question.key)
+            .collect()
+    };
+    assert_eq!(keys(Record::Entry(&entry)), ["first", "pic"]);
+    assert_eq!(keys(Record::Assessment(&assessment)), ["first"]);
+}
+
+#[test]
+fn an_assessments_answers_show_remove_and_leave_unanswered_as_an_entrys_do() {
+    let questions = with_capacity_question();
+    let assessment = assessment("a");
+    let record = Record::Assessment(&assessment);
+    let keys = |questions: Vec<&Question>| -> Vec<&'static str> {
+        questions.into_iter().map(|question| question.key).collect()
+    };
+    let mut information =
+        AuthoritySpecificInformation::new(json!({"first": false, "second": true, "pic": true}));
+    assert_eq!(
+        keys(questions.shown_for(record, Some(&information))),
+        ["first"]
+    );
+    questions.drop_hidden_answers_for(record, &mut information);
+    assert_eq!(information.value(), &json!({"first": false}));
+    let information = AuthoritySpecificInformation::new(json!({"first": true}));
+    assert_eq!(
+        keys(questions.required_unanswered_for(record, Some(&information))),
+        ["second"]
+    );
+}
+
+#[test]
+fn a_records_information_is_found_by_its_authority() {
+    let authority = AuthorityId::new("XX", "TEST").unwrap();
+    let other = AuthorityId::new("YY", "TEST").unwrap();
+    let information = AuthoritySpecificInformation::new(json!({"first": true}));
+    let mut parts = flight_parts("e", Capacity::PilotInCommand);
+    parts
+        .authority_information
+        .insert(authority.clone(), information.clone());
+    let entry = Entry::new(parts).unwrap();
+    let mut assessment = assessment("a");
+    assessment
+        .authority_information
+        .insert(authority.clone(), information.clone());
+    for record in [Record::Entry(&entry), Record::Assessment(&assessment)] {
+        assert_eq!(record.information_for(&authority), Some(&information));
+        assert_eq!(record.information_for(&other), None);
     }
 }
