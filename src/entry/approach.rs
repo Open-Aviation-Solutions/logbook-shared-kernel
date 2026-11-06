@@ -9,11 +9,13 @@ use icao_shared_kernel::{ApproachType, LocationIndicator};
 /// An instrument approach the pilot conducted, and where, and whether it
 /// ended in a circling manoeuvre.
 ///
-/// `procedure` is the procedure flown; it does not say what class of operation
-/// the approach was. ICAO Annex 6 classes the operation flown, so an ILS
-/// approach that ends in a circling manoeuvre is a 2D operation. This
-/// crate derives no class of its own: an authority reads it from
-/// `procedure().is_3d()` and `circled()`.
+/// `procedure` is the procedure flown, and `procedure().is_3d()` whether it was
+/// a 2D or a 3D operation (Annex 6). `circled` is whether it was extended by
+/// a circling approach, which does not change that class: Annex 6 Part I
+/// names a "circling approach operation" beside a 2D one, in its definition
+/// of minimum descent altitude or height, and does not class a circled
+/// approach as 2D. An authority reads `circled()` for its own rules on
+/// circling approaches.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Approach {
     procedure: ApproachType,
