@@ -187,6 +187,21 @@ fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
     ] {
         assert!(!Answer::Person.accepts(&person), "{person}");
     }
+    for count in [json!(0), json!(1), json!(12)] {
+        assert!(Answer::Count.accepts(&count), "{count}");
+    }
+    for count in [
+        json!(-1),
+        json!(1.5),
+        json!(2.0),
+        json!("2"),
+        json!(true),
+        json!(null),
+        json!([1]),
+        json!({"count": 1}),
+    ] {
+        assert!(!Answer::Count.accepts(&count), "{count}");
+    }
 }
 
 #[test]
