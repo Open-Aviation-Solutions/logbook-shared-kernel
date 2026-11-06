@@ -139,7 +139,8 @@ pub enum ProblemAt {
 /// Whether a problem stops the entry being saved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProblemKind {
-    /// The section contradicts itself, and the entry is not saved.
+    /// The authority cannot accept the section: it contradicts itself, or
+    /// its version is missing or unsupported. The entry is not saved.
     Refusal,
     /// The section says what the authority's conditions do not support. The
     /// entry is the pilot's claim, so it is saved, and the host shows the
