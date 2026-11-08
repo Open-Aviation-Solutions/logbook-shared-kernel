@@ -50,7 +50,7 @@ fn casa_picus() -> Questions {
                         regulation: "61.095(3)",
                     },
                 ]),
-                shown_when: picus(),
+                applies_when: picus(),
                 required: true,
             },
             Question {
@@ -58,7 +58,7 @@ fn casa_picus() -> Questions {
                 label: "Receiving flight training".into(),
                 regulation: "61.095(3)(b)",
                 answer: Answer::YesNo,
-                shown_when: Some(Condition::All(vec![
+                applies_when: Some(Condition::All(vec![
                     picus().unwrap(),
                     Condition::Answer {
                         key: "route",
@@ -81,7 +81,7 @@ fn easa_picus() -> Questions {
             label: "Countersigned by the PIC".into(),
             regulation: "AMC1 FCL.050(b)(1)(v), (b)(5)",
             answer: Answer::Person,
-            shown_when: Some(Condition::Capacity(
+            applies_when: Some(Condition::Capacity(
                 Capacity::PilotInCommandUnderSupervision,
             )),
             required: true,
@@ -89,8 +89,8 @@ fn easa_picus() -> Questions {
     )
 }
 
-/// The keys of the questions shown for an entry flown in `capacity`.
-fn shown(
+/// The keys of the questions that apply to an entry flown in `capacity`.
+fn applicable(
     questions: &Questions,
     capacity: Capacity,
     information: Option<Value>,
@@ -98,7 +98,7 @@ fn shown(
     let entry = flight("e", capacity);
     let information = information.map(AuthoritySpecificInformation::new);
     questions
-        .shown_for(Record::Entry(&entry), information.as_ref())
+        .applicable_for(Record::Entry(&entry), information.as_ref())
         .into_iter()
         .map(|question| question.key)
         .collect()
@@ -107,37 +107,37 @@ fn shown(
 const PICUS: Capacity = Capacity::PilotInCommandUnderSupervision;
 
 #[test]
-fn casas_questions_are_not_shown_for_a_pilot_in_command() {
-    assert!(shown(&casa_picus(), Capacity::PilotInCommand, None).is_empty());
+fn casas_questions_do_not_apply_to_a_pilot_in_command() {
+    assert!(applicable(&casa_picus(), Capacity::PilotInCommand, None).is_empty());
 }
 
 #[test]
 fn casas_questions_ask_the_route_first() {
-    assert_eq!(shown(&casa_picus(), PICUS, None), ["route"]);
+    assert_eq!(applicable(&casa_picus(), PICUS, None), ["route"]);
 }
 
 #[test]
 fn casas_questions_ask_about_flight_training_only_on_the_instructor_route() {
     assert_eq!(
-        shown(&casa_picus(), PICUS, Some(json!({"route": "instructor"}))),
+        applicable(&casa_picus(), PICUS, Some(json!({"route": "instructor"}))),
         ["route", "receiving_flight_training"]
     );
     assert_eq!(
-        shown(&casa_picus(), PICUS, Some(json!({"route": "operator"}))),
+        applicable(&casa_picus(), PICUS, Some(json!({"route": "operator"}))),
         ["route"]
     );
 }
 
 #[test]
-fn the_adrs_information_answers_every_question_casa_shows() {
+fn the_adrs_information_answers_every_question_of_casas_that_applies() {
     let information = json!({"route": "instructor", "receiving_flight_training": false});
     let questions = casa_picus();
-    assert_answers_every_question_shown(&questions, PICUS, &information, 2);
+    assert_answers_every_question_that_applies(&questions, PICUS, &information, 2);
 }
 
-/// Each question shown, `count` of them, has an answer of its kind in
+/// Each question that applies, `count` of them, has an answer of its kind in
 /// `information`.
-fn assert_answers_every_question_shown(
+fn assert_answers_every_question_that_applies(
     questions: &Questions,
     capacity: Capacity,
     information: &Value,
@@ -145,33 +145,33 @@ fn assert_answers_every_question_shown(
 ) {
     let entry = flight("e", capacity);
     let information = AuthoritySpecificInformation::new(information.clone());
-    let shown = questions.shown_for(Record::Entry(&entry), Some(&information));
-    assert_eq!(shown.len(), count);
-    for question in shown {
+    let applicable = questions.applicable_for(Record::Entry(&entry), Some(&information));
+    assert_eq!(applicable.len(), count);
+    for question in applicable {
         let answer = &information.value()[question.key];
         assert!(question.answer.accepts(answer), "{}", question.key);
     }
 }
 
 #[test]
-fn easas_question_is_shown_only_for_pilot_in_command_under_supervision() {
+fn easas_question_applies_only_to_pilot_in_command_under_supervision() {
     for capacity in [
         Capacity::PilotInCommand,
         Capacity::CoPilot,
         Capacity::DualInstruction,
     ] {
         assert!(
-            shown(&easa_picus(), capacity, None).is_empty(),
+            applicable(&easa_picus(), capacity, None).is_empty(),
             "{capacity:?}"
         );
     }
-    assert_eq!(shown(&easa_picus(), PICUS, None), ["countersigned_by"]);
+    assert_eq!(applicable(&easa_picus(), PICUS, None), ["countersigned_by"]);
 }
 
 #[test]
 fn a_person_named_answers_easas_question() {
     let information = json!({"countersigned_by": {"name": "A. Pilot"}});
-    assert_answers_every_question_shown(&easa_picus(), PICUS, &information, 1);
+    assert_answers_every_question_that_applies(&easa_picus(), PICUS, &information, 1);
 }
 
 #[test]
@@ -231,13 +231,13 @@ fn a_persons_name_may_not_be_empty() {
 }
 
 #[test]
-fn an_answer_to_a_hidden_question_meets_no_condition() {
-    let question = |key, shown_when| Question {
+fn an_answer_to_a_question_that_does_not_apply_meets_no_condition() {
+    let question = |key, applies_when| Question {
         key,
         label: key.into(),
         regulation: "",
         answer: Answer::YesNo,
-        shown_when: Some(shown_when),
+        applies_when: Some(applies_when),
         required: true,
     };
     let questions = Questions::new(
@@ -255,10 +255,10 @@ fn an_answer_to_a_hidden_question_meets_no_condition() {
     );
     let information = Some(json!({"first": true}));
     assert_eq!(
-        shown(&questions, Capacity::PilotInCommand, information.clone()),
+        applicable(&questions, Capacity::PilotInCommand, information.clone()),
         ["first", "second"]
     );
-    assert!(shown(&questions, PICUS, information).is_empty());
+    assert!(applicable(&questions, PICUS, information).is_empty());
 }
 
 #[test]
@@ -271,7 +271,7 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
                 label: "First".into(),
                 regulation: "",
                 answer: Answer::YesNo,
-                shown_when: None,
+                applies_when: None,
                 required: true,
             },
             Question {
@@ -279,7 +279,7 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
                 label: "Second".into(),
                 regulation: "",
                 answer: Answer::Text,
-                shown_when: Some(Condition::Answer {
+                applies_when: Some(Condition::Answer {
                     key: "first",
                     is: json!(false),
                 }),
@@ -289,17 +289,17 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
     );
     let pic = Capacity::PilotInCommand;
     assert_eq!(
-        shown(&questions, pic, Some(json!({"first": false}))),
+        applicable(&questions, pic, Some(json!({"first": false}))),
         ["first", "second"]
     );
     for information in [json!({"first": true}), json!({"first": "false"}), json!({})] {
-        assert_eq!(shown(&questions, pic, Some(information)), ["first"]);
+        assert_eq!(applicable(&questions, pic, Some(information)), ["first"]);
     }
-    assert_eq!(shown(&questions, pic, None), ["first"]);
+    assert_eq!(applicable(&questions, pic, None), ["first"]);
 }
 
 #[test]
-fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
+fn the_answer_to_a_follow_up_that_does_not_apply_is_removed_and_the_rest_kept() {
     let questions = casa_picus();
     let entry = flight("e", PICUS);
     let mut information = AuthoritySpecificInformation::new(json!({
@@ -308,7 +308,7 @@ fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
         "other": 1,
         "_version": 1
     }));
-    questions.drop_hidden_answers_for(Record::Entry(&entry), &mut information);
+    questions.retain_applicable_answers_for(Record::Entry(&entry), &mut information);
     assert_eq!(
         information.value(),
         &json!({"route": "operator", "other": 1, "_version": 1})
@@ -316,7 +316,7 @@ fn a_hidden_follow_ups_answer_is_removed_and_the_rest_kept() {
 }
 
 #[test]
-fn the_required_unanswered_questions_are_those_shown_without_an_accepted_answer() {
+fn the_required_unanswered_questions_are_those_that_apply_without_an_accepted_answer() {
     let questions = casa_picus();
     let entry = flight("e", PICUS);
     let unanswered = |information: Option<Value>| -> Vec<&'static str> {
@@ -384,15 +384,15 @@ fn information_without_a_whole_number_under_the_key_has_no_version() {
     }
 }
 
-/// Questions with one always shown, a follow-up on its answer, and one for
+/// Questions with one that always applies, a follow-up on its answer, and one for
 /// a pilot in command.
 fn with_capacity_question() -> Questions {
-    let question = |key, shown_when| Question {
+    let question = |key, applies_when| Question {
         key,
         label: key.into(),
         regulation: "",
         answer: Answer::YesNo,
-        shown_when,
+        applies_when,
         required: true,
     };
     Questions::new(
@@ -418,7 +418,7 @@ fn a_capacity_condition_holds_only_for_an_entry() {
     let assessment = assessment("a");
     let keys = |record| -> Vec<&'static str> {
         questions
-            .shown_for(record, None)
+            .applicable_for(record, None)
             .into_iter()
             .map(|question| question.key)
             .collect()
@@ -428,7 +428,7 @@ fn a_capacity_condition_holds_only_for_an_entry() {
 }
 
 #[test]
-fn an_assessments_answers_show_remove_and_leave_unanswered_as_an_entrys_do() {
+fn an_assessments_answers_apply_remove_and_leave_unanswered_as_an_entrys_do() {
     let questions = with_capacity_question();
     let assessment = assessment("a");
     let record = Record::Assessment(&assessment);
@@ -438,10 +438,10 @@ fn an_assessments_answers_show_remove_and_leave_unanswered_as_an_entrys_do() {
     let mut information =
         AuthoritySpecificInformation::new(json!({"first": false, "second": true, "pic": true}));
     assert_eq!(
-        keys(questions.shown_for(record, Some(&information))),
+        keys(questions.applicable_for(record, Some(&information))),
         ["first"]
     );
-    questions.drop_hidden_answers_for(record, &mut information);
+    questions.retain_applicable_answers_for(record, &mut information);
     assert_eq!(information.value(), &json!({"first": false}));
     let information = AuthoritySpecificInformation::new(json!({"first": true}));
     assert_eq!(
@@ -473,12 +473,12 @@ fn a_records_information_is_found_by_its_authority() {
 /// Questions with one for a session, one for an entry with an approach,
 /// and a follow-up to the second.
 fn with_record_questions() -> Questions {
-    let question = |key, shown_when| Question {
+    let question = |key, applies_when| Question {
         key,
         label: key.into(),
         regulation: "",
         answer: Answer::YesNo,
-        shown_when: Some(shown_when),
+        applies_when: Some(applies_when),
         required: false,
     };
     Questions::new(
@@ -516,7 +516,7 @@ fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_ap
     let assessment = assessment("x");
     let keys = |record| -> Vec<&'static str> {
         questions
-            .shown_for(record, None)
+            .applicable_for(record, None)
             .into_iter()
             .map(|question| question.key)
             .collect()
@@ -535,7 +535,7 @@ fn a_sessions_answers_are_kept_while_it_records_an_approach() {
     let session = Entry::new(parts).unwrap();
     let answers = json!({"session": true, "approach": true, "follow_up": true});
     let mut information = AuthoritySpecificInformation::new(answers.clone());
-    questions.drop_hidden_answers_for(Record::Entry(&session), &mut information);
+    questions.retain_applicable_answers_for(Record::Entry(&session), &mut information);
     assert_eq!(information.value(), &answers);
 }
 
@@ -547,11 +547,92 @@ fn an_answer_is_removed_with_its_follow_up_once_the_approach_is_removed() {
     let answers = json!({"approach": true, "follow_up": true});
     let mut information = AuthoritySpecificInformation::new(answers.clone());
     let approached = Entry::new(parts.clone()).unwrap();
-    questions.drop_hidden_answers_for(Record::Entry(&approached), &mut information);
+    questions.retain_applicable_answers_for(Record::Entry(&approached), &mut information);
     assert_eq!(information.value(), &answers);
 
     parts.approaches.clear();
     let without = Entry::new(parts).unwrap();
-    questions.drop_hidden_answers_for(Record::Entry(&without), &mut information);
+    questions.retain_applicable_answers_for(Record::Entry(&without), &mut information);
     assert_eq!(information.value(), &json!({}));
+}
+
+/// Questions with a count asked of a pilot in command, and a follow-up
+/// that applies when the entry records an approach or the count is at
+/// least one.
+fn with_count_question() -> Questions {
+    Questions::new(
+        1,
+        vec![
+            Question {
+                key: "count",
+                label: "count".into(),
+                regulation: "",
+                answer: Answer::Count,
+                applies_when: Some(Condition::Capacity(Capacity::PilotInCommand)),
+                required: false,
+            },
+            Question {
+                key: "follow_up",
+                label: "follow_up".into(),
+                regulation: "",
+                answer: Answer::YesNo,
+                applies_when: Some(Condition::Any(vec![
+                    Condition::AnyApproach,
+                    Condition::CountAtLeast { key: "count", n: 1 },
+                ])),
+                required: false,
+            },
+        ],
+    )
+}
+
+#[test]
+fn a_count_condition_holds_only_on_a_count_of_at_least_n() {
+    let questions = with_count_question();
+    let pic = Capacity::PilotInCommand;
+    for count in [json!(1), json!(2)] {
+        assert_eq!(
+            applicable(&questions, pic, Some(json!({ "count": count }))),
+            ["count", "follow_up"],
+            "{count}"
+        );
+    }
+    for count in [json!(0), json!("1"), json!(1.0), json!(-1), json!(true)] {
+        assert_eq!(
+            applicable(&questions, pic, Some(json!({ "count": count }))),
+            ["count"],
+            "{count}"
+        );
+    }
+    assert_eq!(applicable(&questions, pic, Some(json!({}))), ["count"]);
+    assert_eq!(applicable(&questions, pic, None), ["count"]);
+    assert!(applicable(&questions, PICUS, Some(json!({"count": 1}))).is_empty());
+}
+
+#[test]
+fn an_any_condition_holds_when_any_of_its_conditions_does() {
+    let questions = with_count_question();
+    let mut parts = flight_parts("a", Capacity::PilotInCommand);
+    parts.approaches.push(an_approach());
+    let approached = Entry::new(parts).unwrap();
+    let flight = flight("e", Capacity::PilotInCommand);
+    let assessment = assessment("x");
+    let keys = |record, answers: Value| -> Vec<&'static str> {
+        let information = AuthoritySpecificInformation::new(answers);
+        questions
+            .applicable_for(record, Some(&information))
+            .into_iter()
+            .map(|question| question.key)
+            .collect()
+    };
+    assert_eq!(
+        keys(Record::Entry(&approached), json!({"count": 0})),
+        ["count", "follow_up"]
+    );
+    assert_eq!(
+        keys(Record::Entry(&flight), json!({"count": 1})),
+        ["count", "follow_up"]
+    );
+    assert_eq!(keys(Record::Entry(&flight), json!({"count": 0})), ["count"]);
+    assert!(keys(Record::Assessment(&assessment), json!({"count": 1})).is_empty());
 }

@@ -6,10 +6,10 @@
 //! assessment), described as data for the host to show, with no dependence
 //! on a user interface.
 //!
-//! A question is shown on conditions on the record and on the answers
-//! already given, which this module evaluates, so that the host and the
-//! authority read them the same way. For the same reason it says which
-//! answers are stale ([`Questions::drop_hidden_answers_for`]) and which
+//! A question applies to a record on conditions on the record and on the
+//! answers already given, which this module evaluates, so that the host and
+//! the authority read them the same way. For the same reason it says which
+//! answers are stale ([`Questions::retain_applicable_answers_for`]) and which
 //! required questions are unanswered
 //! ([`Questions::required_unanswered_for`]). The rules that refuse an answer
 //! are the authority's
@@ -50,7 +50,7 @@ impl Questions {
         self.version
     }
 
-    /// Every question, in order, whether shown or not.
+    /// Every question, in order, whether it applies or not.
     pub fn iter(&self) -> std::slice::Iter<'_, Question> {
         self.questions.iter()
     }
@@ -83,70 +83,72 @@ impl Questions {
         }
     }
 
-    /// The questions shown for `record`, in order, given the answers in
+    /// The questions that apply to `record`, in order, given the answers in
     /// `information` so far (`None`: none yet).
     ///
-    /// An answer counts towards a condition only when its question is shown
-    /// before the one the condition is on: an answer left in the information
-    /// to a question now hidden is not given, so its follow-ups are hidden
-    /// too. This is the only way to evaluate the questions' conditions, so
-    /// that the host and the authority read them the same way.
-    pub fn shown_for<'a>(
+    /// An answer counts towards a condition only when its question applies
+    /// and comes before the one the condition is on: an answer left in the
+    /// information to a question that no longer applies is not given, so its
+    /// follow-ups do not apply either. This is the only way to evaluate the
+    /// questions' conditions, so that the host and the authority read them
+    /// the same way.
+    pub fn applicable_for<'a>(
         &'a self,
         record: Record,
         information: Option<&AuthoritySpecificInformation>,
     ) -> Vec<&'a Question> {
-        let mut shown: Vec<&'a Question> = Vec::new();
+        let mut applicable: Vec<&'a Question> = Vec::new();
         for question in &self.questions {
             let answer = |key: &str| {
-                shown
+                applicable
                     .iter()
                     .any(|earlier| earlier.key == key)
                     .then(|| information.and_then(|information| information.value().get(key)))
                     .flatten()
             };
             if question
-                .shown_when
+                .applies_when
                 .as_ref()
                 .is_none_or(|condition| condition.holds(record, &answer))
             {
-                shown.push(question);
+                applicable.push(question);
             }
         }
-        shown
+        applicable
     }
 
-    /// Remove from `information` the answers to these questions that
-    /// [`Questions::shown_for`] does not show for `record`: an answer left
-    /// from before the pilot changed the record, or the answer, that showed
-    /// its question. A host calls it before it asks the authority for the
-    /// problems with the information or saves it, so that the authority
-    /// never reads an answer the pilot cannot see. A key that is no
-    /// question's is kept, as it is the authority's, and so is the version.
+    /// Keep in `information` only the answers to these questions that apply
+    /// to `record` ([`Questions::applicable_for`]), removing the rest: an
+    /// answer left from before the pilot changed the record, or the answer,
+    /// that made its question apply. A host calls it before it asks the
+    /// authority for the problems with the information or saves it, so that
+    /// the authority never reads an answer to a question that does not
+    /// apply. A key that is no question's is kept, as it is the authority's,
+    /// and so is the version.
     ///
     /// So a question asked only of some records belongs in the list, with a
     /// [`Condition`] on the record, not left out of it: only then is its
     /// answer removed when the record changes.
-    pub fn drop_hidden_answers_for(
+    pub fn retain_applicable_answers_for(
         &self,
         record: Record,
         information: &mut AuthoritySpecificInformation,
     ) {
-        let shown: Vec<&str> = self
-            .shown_for(record, Some(information))
+        let applicable: Vec<&str> = self
+            .applicable_for(record, Some(information))
             .into_iter()
             .map(|question| question.key)
             .collect();
         if let Some(answers) = information.value_mut().as_object_mut() {
             for question in &self.questions {
-                if !shown.contains(&question.key) {
+                if !applicable.contains(&question.key) {
                     answers.remove(question.key);
                 }
             }
         }
     }
 
-    /// The questions shown for `record` that are required and have no
+    /// The questions that apply to `record` that are required and have no
     /// answer: their key is absent from `information`, or holds a value that
     /// the question's [`Answer::accepts`] refuses. This is what "answered"
     /// means, for the host and the authority alike.
@@ -155,7 +157,7 @@ impl Questions {
         record: Record,
         information: Option<&AuthoritySpecificInformation>,
     ) -> Vec<&'a Question> {
-        self.shown_for(record, information)
+        self.applicable_for(record, information)
             .into_iter()
             .filter(|question| question.required)
             .filter(|question| {
@@ -187,8 +189,8 @@ pub struct Question {
     /// What it is asked for.
     pub regulation: &'static str,
     pub answer: Answer,
-    /// `None`: always shown.
-    pub shown_when: Option<Condition>,
+    /// `None`: it always applies.
+    pub applies_when: Option<Condition>,
     pub required: bool,
 }
 
@@ -253,14 +255,18 @@ pub struct Choice {
     pub regulation: &'static str,
 }
 
-/// When a question is shown.
+/// When a question applies to a record.
 ///
 /// A condition on an answer may refer only to an earlier question:
-/// [`Questions::shown_for`] counts only the answers to questions already
-/// shown, so a condition on a later question's key, or on a key no question
-/// has, is never met, and the question it is on is never shown. Nothing
-/// checks the questions for this.
+/// [`Questions::applicable_for`] counts only the answers to earlier
+/// questions that apply, so a condition on a later question's key, or on a
+/// key no question has, is never met, and the question it is on never
+/// applies. Nothing checks the questions for this.
+///
+/// It is `#[non_exhaustive]`, so that a condition added later is not a
+/// breaking release: only this crate evaluates conditions.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Condition {
     /// The record is an entry, and its capacity is this one. It never
     /// holds for an assessment, which has no capacity.
@@ -273,10 +279,16 @@ pub enum Condition {
     /// holds for an assessment.
     AnyApproach,
     /// The answer stored under `key` is `is`, compared as it is stored.
-    /// Only the answer to a question shown earlier counts.
+    /// Only the answer to an earlier question that applies counts.
     Answer { key: &'static str, is: Value },
+    /// The answer stored under `key` is a count ([`Answer::Count`]) of at
+    /// least `n`. A missing answer, or one that is not a count, does not
+    /// meet it. Only the answer to an earlier question that applies counts.
+    CountAtLeast { key: &'static str, n: u64 },
     /// Every one of these.
     All(Vec<Condition>),
+    /// Any one of these.
+    Any(Vec<Condition>),
 }
 
 impl Condition {
@@ -295,9 +307,15 @@ impl Condition {
                 matches!(record, Record::Entry(entry) if !entry.approaches().is_empty())
             }
             Self::Answer { key, is } => answer(key) == Some(is),
+            Self::CountAtLeast { key, n } => answer(key)
+                .and_then(Value::as_u64)
+                .is_some_and(|count| count >= *n),
             Self::All(conditions) => conditions
                 .iter()
                 .all(|condition| condition.holds(record, answer)),
+            Self::Any(conditions) => conditions
+                .iter()
+                .any(|condition| condition.holds(record, answer)),
         }
     }
 }
