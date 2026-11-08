@@ -69,8 +69,8 @@ pub trait LicensingAuthority {
     ///
     /// A question that is asked only of some records (only of a session,
     /// say, or only of an entry with an approach) is kept in the list, with
-    /// a [`Condition`] on the record as its `shown_when`,
-    /// rather than left out. Then [`Questions::drop_hidden_answers_for`]
+    /// a [`Condition`] on the record as its `applies_when`, rather than
+    /// left out. Then [`Questions::retain_applicable_answers_for`]
     /// removes its answer once the record no longer meets the condition;
     /// an answer to a question left out would be kept, as no question's.
     fn questions_for(&self, record: Record) -> Questions;
@@ -84,10 +84,10 @@ pub trait LicensingAuthority {
     ///
     /// The host saves a record's information in this order: it finds the
     /// stored information ([`Record::information_for`] the authority's
-    /// [`id`]) or starts new; it removes the answers to hidden questions
-    /// ([`Questions::drop_hidden_answers_for`]); it asks for the problems
-    /// with what is left, here, and for the required questions left
-    /// unanswered ([`Questions::required_unanswered_for`]); and, unless a
+    /// [`id`]) or starts new; it removes the answers to questions that do
+    /// not apply ([`Questions::retain_applicable_answers_for`]); it asks for
+    /// the problems with what is left, here, and for the required questions
+    /// left unanswered ([`Questions::required_unanswered_for`]); and, unless a
     /// problem is a refusal, it writes the version ([`Questions::stamp`]) and
     /// saves. So the information's version is as it was stored
     /// ([`AuthoritySpecificInformation::version`]): `None` for information

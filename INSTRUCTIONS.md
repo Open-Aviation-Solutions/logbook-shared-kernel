@@ -17,7 +17,7 @@ wants the records without the interface):
   (taken from `icao-shared-kernel`); an authority's information on it or on
   an assessment (`AuthoritySpecificInformation`), stored as the authority
   gives it, holding the answers to its questions under each question's key
-  (which `Questions` reads to decide what is shown), and the questions'
+  (which `Questions` reads to decide which questions apply), and the questions'
   version under the reserved key `_version`
   (`AuthoritySpecificInformation::VERSION_KEY`), which no question may use;
   and the neutral description of an aircraft type.

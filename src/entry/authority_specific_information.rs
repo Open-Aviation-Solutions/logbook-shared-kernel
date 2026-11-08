@@ -10,7 +10,7 @@
 /// questions, each under its question's key (a JSON object, in the shapes
 /// [`Answer`](crate::authority::Answer) describes), and
 /// [`Questions`](crate::authority::Questions) reads those answers to decide
-/// which questions are shown. Anything else in it only the authority reads.
+/// which questions apply. Anything else in it only the authority reads.
 ///
 /// It is a stored format, so it carries the version of the questions its
 /// answers were given to, under the reserved key
