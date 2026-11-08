@@ -14,6 +14,7 @@ use crate::entry::{AssessmentId, EntryId};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Contribution {
     pub entry: EntryId,
+    /// As recorded, saturating at `usize::MAX` (32 bits on `wasm32`).
     pub events: usize,
 }
 
@@ -35,7 +36,8 @@ pub struct CurrencyResult {
     /// The same, for the checks driven by assessments rather than entries,
     /// in the order of their ids.
     pub qualifying_assessments: Vec<AssessmentId>,
-    /// Qualifying events found inside the window.
+    /// Qualifying events found inside the window, as recorded, saturating at
+    /// `usize::MAX` (32 bits on `wasm32`).
     pub found: usize,
     /// Events required.
     pub required: usize,

@@ -11,11 +11,31 @@ use time::{Date, Month};
 /// `n`, and for an `n` of zero, which is meaningless. A check takes it over
 /// every event, not only those in its look-back window, so it can report both
 /// "expires on X" and "expired on X".
+#[deprecated(
+    since = "0.2.2",
+    note = "takes a date for each event; use EventWindow, which keeps a count for each date"
+)]
 pub fn nth_most_recent(dates: &[Date], n: usize) -> Option<Date> {
-    let index = n.checked_sub(1)?;
     let mut sorted = dates.to_vec();
     sorted.sort_unstable_by(|a, b| b.cmp(a));
-    sorted.get(index).copied()
+    nth_most_recent_of_counts(sorted.into_iter().map(|d| (d, 1)), n)
+}
+
+/// [`nth_most_recent`], over how many events fell on each date, given most
+/// recent first: the date at which the counts, summed from the most recent,
+/// reach `n`.
+pub(crate) fn nth_most_recent_of_counts(
+    most_recent_first: impl IntoIterator<Item = (Date, usize)>,
+    n: usize,
+) -> Option<Date> {
+    if n == 0 {
+        return None;
+    }
+    let mut seen: usize = 0;
+    most_recent_first.into_iter().find_map(|(on, events)| {
+        seen = seen.saturating_add(events);
+        (seen >= n).then_some(on)
+    })
 }
 
 /// The first day on which `d` is no longer within the previous `months`
@@ -36,7 +56,19 @@ pub fn months_on(d: Date, months: i32) -> Option<Date> {
 
 /// How many events fall strictly after the cutoff.
 pub fn count_in_window(all_event_dates: &[Date], cutoff: Date) -> usize {
-    all_event_dates.iter().filter(|d| **d > cutoff).count()
+    count_of_counts_in_window(all_event_dates.iter().map(|d| (*d, 1)), cutoff)
+}
+
+/// [`count_in_window`], over how many events fell on each date. The sum
+/// saturates at `usize::MAX`.
+pub(crate) fn count_of_counts_in_window(
+    counts: impl IntoIterator<Item = (Date, usize)>,
+    cutoff: Date,
+) -> usize {
+    counts
+        .into_iter()
+        .filter(|(on, _)| *on > cutoff)
+        .fold(0, |found, (_, events)| found.saturating_add(events))
 }
 
 /// Last day of the Nth calendar month after the month containing `d`.
@@ -160,6 +192,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn nth_most_recent_counts_back_from_the_latest() {
         let dates = [
             date!(2026 - 01 - 01),
