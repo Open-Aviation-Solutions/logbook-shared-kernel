@@ -50,6 +50,10 @@ impl EntryId {
 
 /// What an entry logs: a flight in an aircraft, or a session in a flight
 /// simulation training device.
+///
+/// Equality compares everything it holds, so two entries for one flight can
+/// have unequal subjects; to group entries by flight or session, use
+/// [`Subject::id`].
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Subject {
     Flight {
@@ -78,22 +82,26 @@ pub enum Subject {
 }
 
 impl Subject {
-    /// The key of what the entry logs, by which an authority can group a
-    /// pilot's entries: the entries for one flight share a key, as do those
+    /// The id of what the entry logs, by which an authority can group a
+    /// pilot's entries: the entries for one flight share an id, as do those
     /// for one session.
-    pub fn key(&self) -> SubjectKey {
+    pub fn id(&self) -> SubjectId {
         match self {
-            Self::Flight { flight, .. } => SubjectKey::Flight(*flight),
-            Self::Session { session, .. } => SubjectKey::Session(*session),
+            Self::Flight { flight, .. } => SubjectId::Flight(*flight),
+            Self::Session { session, .. } => SubjectId::Session(*session),
         }
     }
 }
 
-/// The key of a [`Subject`]: the flight or the session an entry logs, which
-/// can be hashed and ordered. A flight and a session with the same id have
-/// different keys.
+/// The id of a [`Subject`]: the flight or the session an entry logs, which
+/// can be hashed and ordered. A flight and a session with the same `Uuid`
+/// have different ids.
+///
+/// The order exists so that the id can go in ordered collections. Every
+/// flight comes before every session, and that order is fixed: changing it
+/// is a breaking change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum SubjectKey {
+pub enum SubjectId {
     /// The kernel's `Flight`.
     Flight(Uuid),
     /// The kernel's `FstdSession`.
