@@ -118,9 +118,9 @@ impl Questions {
     }
 
     /// Keep in `information` only the answers to these questions that apply
-    /// to `record` ([`Questions::applicable_for`]), removing the rest: an
-    /// answer left from before the pilot changed the record, or the answer,
-    /// that made its question apply. A host calls it before it asks the
+    /// to `record` ([`Questions::applicable_for`]), removing the rest: the
+    /// answers to questions that no longer apply because the pilot changed
+    /// the record, or an earlier answer, since answering them. A host calls it before it asks the
     /// authority for the problems with the information or saves it, so that
     /// the authority never reads an answer to a question that does not
     /// apply. A key that is no question's is kept, as it is the authority's,
@@ -264,7 +264,9 @@ pub struct Choice {
 /// applies. Nothing checks the questions for this.
 ///
 /// It is `#[non_exhaustive]`, so that a condition added later is not a
-/// breaking release: only this crate evaluates conditions.
+/// breaking release: only this crate evaluates conditions. A consumer that
+/// uses a condition added in a patch requires that patch (`^0.4.1`, say), as
+/// a lock file holding an earlier one does not build it.
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]
 pub enum Condition {
@@ -285,9 +287,9 @@ pub enum Condition {
     /// least `n`. A missing answer, or one that is not a count, does not
     /// meet it. Only the answer to an earlier question that applies counts.
     CountAtLeast { key: &'static str, n: u64 },
-    /// Every one of these.
+    /// Every one of these. With none, it always holds.
     All(Vec<Condition>),
-    /// Any one of these.
+    /// Any one of these. With none, it never holds.
     Any(Vec<Condition>),
 }
 
@@ -308,6 +310,7 @@ impl Condition {
             }
             Self::Answer { key, is } => answer(key) == Some(is),
             Self::CountAtLeast { key, n } => answer(key)
+                .filter(|value| Answer::Count.accepts(value))
                 .and_then(Value::as_u64)
                 .is_some_and(|count| count >= *n),
             Self::All(conditions) => conditions
