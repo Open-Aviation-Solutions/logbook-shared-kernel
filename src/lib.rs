@@ -23,9 +23,9 @@ pub mod entry;
 
 pub use authority::{
     run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
-    ChoiceKind, Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
-    EntryAccumulator, EventWindow, Figure, KindedChoice, LicensingAuthority, Measure, Problem,
-    ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId, Total,
+    ChoiceGroup, ChoiceKind, Classification, Condition, Contribution, CurrencyCheck,
+    CurrencyResult, DateRange, EntryAccumulator, EventWindow, Figure, LicensingAuthority, Measure,
+    Problem, ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId, Total,
 };
 
 pub use entry::{

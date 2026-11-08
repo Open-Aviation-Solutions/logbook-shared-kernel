@@ -222,16 +222,26 @@ pub enum Answer {
     /// or any other type. A writer in another language must emit an integer.
     /// No count is no answer, so the host stores no key (not `0`).
     Count,
-    /// Several of `choices`, each answered further with one of `each`,
-    /// stored as a list of `{"kind": ..., "value": ..., "answer": ...}`: the
-    /// chosen one's kind's `value`, its own `value`, and the `value` of its
-    /// answer among `each`, all strings, and no other key. It is an answer
-    /// when it holds at least one item, each item's kind and value are those
-    /// of one of `choices`, no item has the kind and value of another, and
-    /// each is answered with one of `each`. No choice is no answer, so the
-    /// host stores no key (not `[]`).
+    /// Several of the choices in `groups`, each answered further with one
+    /// of `each`, stored as a list of
+    /// `{"kind": ..., "value": ..., "answer": ...}`: the chosen one's group's
+    /// kind's `value`, its own `value`, and the `value` of its answer among
+    /// `each`, all strings, and no other key. The items are stored in the
+    /// order of the choices, group by group, so that an answer has only one
+    /// spelling. It is an answer when it holds at least one item, each
+    /// item's kind and value are those of a choice in `groups`, the items are
+    /// in that order with none listed twice, and each is answered with one
+    /// of `each`. No choice is no answer, so the host stores no key (not
+    /// `[]`).
+    ///
+    /// A [`Condition::Answer`] on such a question compares the whole list.
+    ///
+    /// `each` and each group's choices must not be empty (with no `each`, a
+    /// required question can never be answered), and a kind's `value` must
+    /// be one group's only, and a choice's `value` must appear only once in
+    /// its group. Nothing checks the questions for this.
     Choices {
-        choices: Vec<KindedChoice>,
+        groups: Vec<ChoiceGroup>,
         each: Vec<Choice>,
     },
 }
@@ -243,7 +253,7 @@ impl Answer {
         match self {
             Self::Choice(choices) => value
                 .as_str()
-                .is_some_and(|value| choices.iter().any(|choice| choice.value == value)),
+                .is_some_and(|value| Choice::is_one_of(choices, value)),
             Self::YesNo => value.is_boolean(),
             Self::Text => value.as_str().is_some_and(|text| !text.trim().is_empty()),
             Self::Person => value.as_object().is_some_and(|person| {
@@ -259,30 +269,40 @@ impl Answer {
                         .all(|key| key == "name" || key == "licence_number")
             }),
             Self::Count => value.is_u64(),
-            Self::Choices { choices, each } => value
+            Self::Choices { groups, each } => value
                 .as_array()
-                .is_some_and(|items| Self::accepts_choices(choices, each, items)),
+                .is_some_and(|items| Self::accepts_choices(groups, each, items)),
         }
     }
 
-    /// Whether `items` answer an [`Answer::Choices`] of `choices`, each
-    /// answered with one of `each`.
-    fn accepts_choices(choices: &[KindedChoice], each: &[Choice], items: &[Value]) -> bool {
-        let mut given: Vec<(&str, &str)> = Vec::new();
+    /// Whether `items` answer an [`Answer::Choices`] of the choices in
+    /// `groups`, each answered with one of `each`, in the choices' order.
+    fn accepts_choices(groups: &[ChoiceGroup], each: &[Choice], items: &[Value]) -> bool {
+        let offered: Vec<(&str, &str)> = groups
+            .iter()
+            .flat_map(|group| {
+                group
+                    .choices
+                    .iter()
+                    .map(|choice| (group.kind.value, choice.value))
+            })
+            .collect();
+        let mut previous: Option<usize> = None;
         for item in items {
             let Some((kind, value, answer)) = Self::kinded_choice(item) else {
                 return false;
             };
-            let offered = choices
-                .iter()
-                .any(|choice| choice.kind.value == kind && choice.choice.value == value);
-            let answered = each.iter().any(|choice| choice.value == answer);
-            if !offered || !answered || given.contains(&(kind, value)) {
+            let Some(position) = offered.iter().position(|&chosen| chosen == (kind, value)) else {
+                return false;
+            };
+            if previous.is_some_and(|previous| position <= previous)
+                || !Choice::is_one_of(each, answer)
+            {
                 return false;
             }
-            given.push((kind, value));
+            previous = Some(position);
         }
-        !given.is_empty()
+        previous.is_some()
     }
 
     /// An item of an [`Answer::Choices`] as stored, read as its kind, value
@@ -297,8 +317,8 @@ impl Answer {
     }
 }
 
-/// One choice of an [`Answer::Choice`], or one of the answers to each
-/// choice of an [`Answer::Choices`] (its `each`).
+/// One choice of an [`Answer::Choice`], one of a [`ChoiceGroup`]'s, or
+/// one of the answers to each choice of an [`Answer::Choices`] (its `each`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Choice {
     /// What is stored when it is chosen.
@@ -308,15 +328,23 @@ pub struct Choice {
     pub regulation: &'static str,
 }
 
-/// One choice of an [`Answer::Choices`]: a choice, and its kind.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct KindedChoice {
-    pub kind: ChoiceKind,
-    pub choice: Choice,
+impl Choice {
+    /// Whether `value` is the stored value of one of `choices`.
+    fn is_one_of(choices: &[Choice], value: &str) -> bool {
+        choices.iter().any(|choice| choice.value == value)
+    }
 }
 
-/// The kind of a [`KindedChoice`], which is stored with it, and by which a
-/// host may group the choices.
+/// The choices of one kind in an [`Answer::Choices`], by which a host may
+/// group them.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChoiceGroup {
+    pub kind: ChoiceKind,
+    pub choices: Vec<Choice>,
+}
+
+/// The kind of the choices in a [`ChoiceGroup`], which is stored with each
+/// one chosen.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChoiceKind {
     /// What is stored as the kind of a choice of it.

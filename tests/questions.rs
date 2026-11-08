@@ -11,8 +11,8 @@ mod common;
 use common::{assessment, flight, flight_parts, session, session_parts};
 use icao_shared_kernel::{ApproachType, Capacity, LocationIndicator};
 use logbook_shared_kernel::{
-    Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, ChoiceKind, Condition,
-    Entry, KindedChoice, Question, Questions, Record,
+    Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, ChoiceGroup, ChoiceKind,
+    Condition, Entry, Question, Questions, Record,
 };
 use serde_json::{json, Value};
 
@@ -238,24 +238,24 @@ fn check_purposes() -> Answer {
         label: value.into(),
         regulation: "",
     };
-    let kinded = |kind, value| KindedChoice {
+    let group = |kind, value| ChoiceGroup {
         kind: ChoiceKind {
             value: kind,
             label: kind.into(),
         },
-        choice: choice(value),
+        choices: vec![choice(value)],
     };
     Answer::Choices {
-        choices: vec![
-            kinded("class_rating", "multi_engine_aeroplane_class_rating"),
-            kinded("operational_rating", "instrument_rating"),
+        groups: vec![
+            group("class_rating", "multi_engine_aeroplane_class_rating"),
+            group("operational_rating", "instrument_rating"),
         ],
         each: vec![choice("passed"), choice("failed")],
     }
 }
 
 #[test]
-fn several_choices_each_of_its_kind_and_answered_once_are_an_answer() {
+fn several_choices_each_of_its_kind_answered_once_in_order_are_an_answer() {
     let purposes = check_purposes();
     assert!(purposes.accepts(&json!([
         {"kind": "class_rating", "value": "multi_engine_aeroplane_class_rating", "answer": "passed"},
@@ -266,12 +266,20 @@ fn several_choices_each_of_its_kind_and_answered_once_are_an_answer() {
     ])));
     let rating = |kind, value, answer| json!({"kind": kind, "value": value, "answer": answer});
     let instrument = || rating("operational_rating", "instrument_rating", "passed");
+    let multi_engine = || {
+        rating(
+            "class_rating",
+            "multi_engine_aeroplane_class_rating",
+            "passed",
+        )
+    };
     for choices in [
         json!([]),
         json!(null),
         json!("instrument_rating"),
         instrument(),
         json!([instrument(), instrument()]),
+        json!([instrument(), multi_engine()]),
         json!([
             instrument(),
             rating("operational_rating", "instrument_rating", "failed")
