@@ -18,7 +18,7 @@
 use icao_shared_kernel::Capacity;
 use serde_json::Value;
 
-use crate::entry::{AuthoritySpecificInformation, Record};
+use crate::entry::{AuthoritySpecificInformation, Record, Subject};
 
 /// The questions an authority asks about a record, in order, and the
 /// version of the stored format of their answers.
@@ -118,11 +118,15 @@ impl Questions {
 
     /// Remove from `information` the answers to these questions that
     /// [`Questions::shown_for`] does not show for `record`: an answer left
-    /// from before the pilot changed the answer that showed its question. A
-    /// host calls it before it asks the authority for the problems with the
-    /// information or saves it, so that the authority never reads an answer
-    /// the pilot cannot see. A key that is no question's is kept, as it is
-    /// the authority's, and so is the version.
+    /// from before the pilot changed the record, or the answer, that showed
+    /// its question. A host calls it before it asks the authority for the
+    /// problems with the information or saves it, so that the authority
+    /// never reads an answer the pilot cannot see. A key that is no
+    /// question's is kept, as it is the authority's, and so is the version.
+    ///
+    /// So a question asked only of some records belongs in the list, with a
+    /// [`Condition`] on the record, not left out of it: only then is its
+    /// answer removed when the record changes.
     pub fn drop_hidden_answers_for(
         &self,
         record: Record,
@@ -261,6 +265,13 @@ pub enum Condition {
     /// The record is an entry, and its capacity is this one. It never
     /// holds for an assessment, which has no capacity.
     Capacity(Capacity),
+    /// The record is an entry of a session in a flight simulation training
+    /// device ([`Subject::Session`]). It never holds for an assessment.
+    Session,
+    /// The record is an entry that records at least one instrument approach
+    /// ([`Entry::approaches`](crate::entry::Entry::approaches)). It never
+    /// holds for an assessment.
+    AnyApproach,
     /// The answer stored under `key` is `is`, compared as it is stored.
     /// Only the answer to a question shown earlier counts.
     Answer { key: &'static str, is: Value },
@@ -275,6 +286,13 @@ impl Condition {
         match self {
             Self::Capacity(capacity) => {
                 matches!(record, Record::Entry(entry) if entry.capacity() == *capacity)
+            }
+            Self::Session => match record {
+                Record::Entry(entry) => matches!(entry.subject(), Subject::Session { .. }),
+                Record::Assessment(_) => false,
+            },
+            Self::AnyApproach => {
+                matches!(record, Record::Entry(entry) if !entry.approaches().is_empty())
             }
             Self::Answer { key, is } => answer(key) == Some(is),
             Self::All(conditions) => conditions

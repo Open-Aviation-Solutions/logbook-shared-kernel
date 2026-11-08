@@ -64,8 +64,15 @@ pub trait LicensingAuthority {
     fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<Figure>;
 
     /// The questions the authority asks for its information on `record`,
-    /// an entry or an assessment, given the record. An authority with
-    /// nothing to ask about a kind of record returns no questions for it.
+    /// an entry or an assessment. An authority with nothing to ask about a
+    /// kind of record returns no questions for it.
+    ///
+    /// A question that is asked only of some records (only of a session,
+    /// say, or only of an entry with an approach) is kept in the list, with
+    /// a [`Condition`] on the record as its `shown_when`,
+    /// rather than left out. Then [`Questions::drop_hidden_answers_for`]
+    /// removes its answer once the record no longer meets the condition;
+    /// an answer to a question left out would be kept, as no question's.
     fn questions_for(&self, record: Record) -> Questions;
 
     /// The problems with `information`, the authority's information on
