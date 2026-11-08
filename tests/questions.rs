@@ -8,11 +8,11 @@
 
 mod common;
 
-use common::{assessment, flight, flight_parts};
-use icao_shared_kernel::Capacity;
+use common::{assessment, flight, flight_parts, session};
+use icao_shared_kernel::{ApproachType, Capacity, LocationIndicator};
 use logbook_shared_kernel::{
-    Answer, AuthorityId, AuthoritySpecificInformation, Choice, Condition, Entry, Question,
-    Questions, Record,
+    Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, Condition, Entry,
+    Question, Questions, Record,
 };
 use serde_json::{json, Value};
 
@@ -468,4 +468,59 @@ fn a_records_information_is_found_by_its_authority() {
         assert_eq!(record.information_for(&authority), Some(&information));
         assert_eq!(record.information_for(&other), None);
     }
+}
+
+/// Questions with one for a session and one for an entry with approaches.
+fn with_record_questions() -> Questions {
+    let question = |key, shown_when| Question {
+        key,
+        label: key.into(),
+        regulation: "",
+        answer: Answer::YesNo,
+        shown_when: Some(shown_when),
+        required: false,
+    };
+    Questions::new(
+        1,
+        vec![
+            question("session", Condition::Session),
+            question("approaches", Condition::Approaches),
+        ],
+    )
+}
+
+#[test]
+fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_approach() {
+    let questions = with_record_questions();
+    let flight = flight("e", Capacity::PilotInCommand);
+    let session = session("s", Capacity::PilotInCommand);
+    let mut parts = flight_parts("a", Capacity::PilotInCommand);
+    parts.approaches.push(Approach::new(
+        ApproachType::Ils,
+        LocationIndicator::parse("YSBK").unwrap(),
+        false,
+    ));
+    let approached = Entry::new(parts).unwrap();
+    let assessment = assessment("x");
+    let keys = |record| -> Vec<&'static str> {
+        questions
+            .shown_for(record, None)
+            .into_iter()
+            .map(|question| question.key)
+            .collect()
+    };
+    assert!(keys(Record::Entry(&flight)).is_empty());
+    assert_eq!(keys(Record::Entry(&session)), ["session"]);
+    assert_eq!(keys(Record::Entry(&approached)), ["approaches"]);
+    assert!(keys(Record::Assessment(&assessment)).is_empty());
+}
+
+#[test]
+fn an_answer_left_after_the_record_changed_is_removed() {
+    let questions = with_record_questions();
+    let entry = flight("e", Capacity::PilotInCommand);
+    let mut information =
+        AuthoritySpecificInformation::new(json!({"session": true, "approaches": true}));
+    questions.drop_hidden_answers_for(Record::Entry(&entry), &mut information);
+    assert_eq!(information.value(), &json!({}));
 }
