@@ -197,7 +197,13 @@ pub struct Question {
 /// The kind of answer a question takes, and how it is stored in the
 /// authority-specific information, under the question's key, so that the
 /// host and the authority agree on it.
+///
+/// It is `#[non_exhaustive]`, so that a kind of answer added later is not a
+/// breaking release: a consumer that matches on it has a wildcard arm. A
+/// consumer that uses a kind added in a patch requires that patch, as
+/// [`Condition`] says.
 #[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
 pub enum Answer {
     /// One of the choices, stored as its `value`, a string.
     Choice(Vec<Choice>),
@@ -216,6 +222,18 @@ pub enum Answer {
     /// or any other type. A writer in another language must emit an integer.
     /// No count is no answer, so the host stores no key (not `0`).
     Count,
+    /// Several of `choices`, each answered further with one of `each`,
+    /// stored as a list of `{"kind": ..., "value": ..., "answer": ...}`: the
+    /// chosen one's kind's `value`, its own `value`, and the `value` of its
+    /// answer among `each`, all strings, and no other key. It is an answer
+    /// when it holds at least one item, each item's kind and value are those
+    /// of one of `choices`, no item has the kind and value of another, and
+    /// each is answered with one of `each`. No choice is no answer, so the
+    /// host stores no key (not `[]`).
+    Choices {
+        choices: Vec<KindedChoice>,
+        each: Vec<Choice>,
+    },
 }
 
 impl Answer {
@@ -241,11 +259,46 @@ impl Answer {
                         .all(|key| key == "name" || key == "licence_number")
             }),
             Self::Count => value.is_u64(),
+            Self::Choices { choices, each } => value
+                .as_array()
+                .is_some_and(|items| Self::accepts_choices(choices, each, items)),
         }
+    }
+
+    /// Whether `items` answer an [`Answer::Choices`] of `choices`, each
+    /// answered with one of `each`.
+    fn accepts_choices(choices: &[KindedChoice], each: &[Choice], items: &[Value]) -> bool {
+        let mut given: Vec<(&str, &str)> = Vec::new();
+        for item in items {
+            let Some((kind, value, answer)) = Self::kinded_choice(item) else {
+                return false;
+            };
+            let offered = choices
+                .iter()
+                .any(|choice| choice.kind.value == kind && choice.choice.value == value);
+            let answered = each.iter().any(|choice| choice.value == answer);
+            if !offered || !answered || given.contains(&(kind, value)) {
+                return false;
+            }
+            given.push((kind, value));
+        }
+        !given.is_empty()
+    }
+
+    /// An item of an [`Answer::Choices`] as stored, read as its kind, value
+    /// and answer, if it has those keys, each a string, and no other.
+    fn kinded_choice(item: &Value) -> Option<(&str, &str, &str)> {
+        let item = item.as_object()?;
+        if item.len() != 3 {
+            return None;
+        }
+        let field = |key| item.get(key).and_then(Value::as_str);
+        Some((field("kind")?, field("value")?, field("answer")?))
     }
 }
 
-/// One choice of a [`Answer::Choice`].
+/// One choice of an [`Answer::Choice`], or one of the answers to each
+/// choice of an [`Answer::Choices`] (its `each`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Choice {
     /// What is stored when it is chosen.
@@ -253,6 +306,23 @@ pub struct Choice {
     /// In the regulation's words.
     pub label: String,
     pub regulation: &'static str,
+}
+
+/// One choice of an [`Answer::Choices`]: a choice, and its kind.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KindedChoice {
+    pub kind: ChoiceKind,
+    pub choice: Choice,
+}
+
+/// The kind of a [`KindedChoice`], which is stored with it, and by which a
+/// host may group the choices.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChoiceKind {
+    /// What is stored as the kind of a choice of it.
+    pub value: &'static str,
+    /// In the regulation's words.
+    pub label: String,
 }
 
 /// When a question applies to a record.
