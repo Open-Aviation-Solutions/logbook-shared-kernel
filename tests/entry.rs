@@ -9,8 +9,9 @@ use common::{c172, flight_parts, session_parts};
 use icao_shared_kernel::{AircraftType, Capacity, FlightDuration, LocationIndicator};
 use logbook_shared_kernel::{
     AircraftDescription, Approach, ApproachType, Entry, EntryError, EntryParts, InstrumentTime,
-    Subject,
+    Subject, SubjectId,
 };
+use std::collections::BTreeSet;
 use uuid::Uuid;
 
 fn minutes(minutes: i64) -> FlightDuration {
@@ -309,4 +310,41 @@ fn an_approach_is_built_from_the_re_exported_approach_types() {
     // A 3D procedure, flown without circling.
     assert!(approach.procedure().is_3d());
     assert!(!approach.circled());
+}
+
+#[test]
+fn a_flights_entries_share_its_id_whatever_else_they_hold() {
+    let flight_id = flight(false).subject.id();
+    let with_a_description = EntryParts {
+        subject: Subject::Flight {
+            flight: Uuid::nil(),
+            aircraft: c172(),
+            description: Some(description()),
+            sole_occupant: false,
+        },
+        ..flight_parts("co-pilot", Capacity::CoPilot)
+    };
+    assert_eq!(with_a_description.subject.id(), flight_id);
+}
+
+#[test]
+fn another_flight_and_a_session_with_the_same_uuid_have_other_ids() {
+    let another_flight = Subject::Flight {
+        flight: Uuid::max(),
+        aircraft: c172(),
+        description: None,
+        sole_occupant: false,
+    };
+    let ids: BTreeSet<SubjectId> = [flight(false).subject, another_flight, session().subject]
+        .iter()
+        .map(Subject::id)
+        .collect();
+    assert_eq!(
+        ids,
+        BTreeSet::from([
+            SubjectId::Flight(Uuid::nil()),
+            SubjectId::Flight(Uuid::max()),
+            SubjectId::Session(Uuid::nil()),
+        ])
+    );
 }
