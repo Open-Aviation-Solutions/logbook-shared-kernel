@@ -77,6 +77,29 @@ pub enum Subject {
     },
 }
 
+impl Subject {
+    /// The key of what the entry logs, by which an authority can group a
+    /// pilot's entries: the entries for one flight share a key, as do those
+    /// for one session.
+    pub fn key(&self) -> SubjectKey {
+        match self {
+            Self::Flight { flight, .. } => SubjectKey::Flight(*flight),
+            Self::Session { session, .. } => SubjectKey::Session(*session),
+        }
+    }
+}
+
+/// The key of a [`Subject`]: the flight or the session an entry logs, which
+/// can be hashed and ordered. A flight and a session with the same id have
+/// different keys.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum SubjectKey {
+    /// The kernel's `Flight`.
+    Flight(Uuid),
+    /// The kernel's `FstdSession`.
+    Session(Uuid),
+}
+
 /// Everything an entry is made of, unchecked: build one and pass it to
 /// [`Entry::new`]. Each field is described on [`Entry`]'s getter of the same
 /// name.

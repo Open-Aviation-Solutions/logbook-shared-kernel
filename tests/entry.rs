@@ -9,8 +9,9 @@ use common::{c172, flight_parts, session_parts};
 use icao_shared_kernel::{AircraftType, Capacity, FlightDuration, LocationIndicator};
 use logbook_shared_kernel::{
     AircraftDescription, Approach, ApproachType, Entry, EntryError, EntryParts, InstrumentTime,
-    Subject,
+    Subject, SubjectKey,
 };
+use std::collections::BTreeSet;
 use uuid::Uuid;
 
 fn minutes(minutes: i64) -> FlightDuration {
@@ -309,4 +310,20 @@ fn an_approach_is_built_from_the_re_exported_approach_types() {
     // A 3D procedure, flown without circling.
     assert!(approach.procedure().is_3d());
     assert!(!approach.circled());
+}
+
+#[test]
+fn a_flights_entries_share_its_key_and_a_session_with_the_same_id_has_another() {
+    let as_co_pilot = flight_parts("co-pilot", Capacity::CoPilot);
+    let keys: BTreeSet<SubjectKey> = [flight(false), as_co_pilot, session()]
+        .iter()
+        .map(|parts| parts.subject.key())
+        .collect();
+    assert_eq!(
+        keys,
+        BTreeSet::from([
+            SubjectKey::Flight(Uuid::nil()),
+            SubjectKey::Session(Uuid::nil())
+        ])
+    );
 }
