@@ -8,7 +8,7 @@
 
 mod common;
 
-use common::{assessment, flight, flight_parts, session};
+use common::{assessment, flight, flight_parts, session, session_parts};
 use icao_shared_kernel::{ApproachType, Capacity, LocationIndicator};
 use logbook_shared_kernel::{
     Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, Condition, Entry,
@@ -470,7 +470,8 @@ fn a_records_information_is_found_by_its_authority() {
     }
 }
 
-/// Questions with one for a session and one for an entry with approaches.
+/// Questions with one for a session, one for an entry with an approach,
+/// and a follow-up to the second.
 fn with_record_questions() -> Questions {
     let question = |key, shown_when| Question {
         key,
@@ -484,8 +485,23 @@ fn with_record_questions() -> Questions {
         1,
         vec![
             question("session", Condition::Session),
-            question("approaches", Condition::Approaches),
+            question("approach", Condition::AnyApproach),
+            question(
+                "follow_up",
+                Condition::Answer {
+                    key: "approach",
+                    is: json!(true),
+                },
+            ),
         ],
+    )
+}
+
+fn an_approach() -> Approach {
+    Approach::new(
+        ApproachType::Ils,
+        LocationIndicator::parse("YSBK").unwrap(),
+        false,
     )
 }
 
@@ -495,11 +511,7 @@ fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_ap
     let flight = flight("e", Capacity::PilotInCommand);
     let session = session("s", Capacity::PilotInCommand);
     let mut parts = flight_parts("a", Capacity::PilotInCommand);
-    parts.approaches.push(Approach::new(
-        ApproachType::Ils,
-        LocationIndicator::parse("YSBK").unwrap(),
-        false,
-    ));
+    parts.approaches.push(an_approach());
     let approached = Entry::new(parts).unwrap();
     let assessment = assessment("x");
     let keys = |record| -> Vec<&'static str> {
@@ -511,16 +523,35 @@ fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_ap
     };
     assert!(keys(Record::Entry(&flight)).is_empty());
     assert_eq!(keys(Record::Entry(&session)), ["session"]);
-    assert_eq!(keys(Record::Entry(&approached)), ["approaches"]);
+    assert_eq!(keys(Record::Entry(&approached)), ["approach"]);
     assert!(keys(Record::Assessment(&assessment)).is_empty());
 }
 
 #[test]
-fn an_answer_left_after_the_record_changed_is_removed() {
+fn a_sessions_answers_are_kept_while_it_records_an_approach() {
     let questions = with_record_questions();
-    let entry = flight("e", Capacity::PilotInCommand);
-    let mut information =
-        AuthoritySpecificInformation::new(json!({"session": true, "approaches": true}));
-    questions.drop_hidden_answers_for(Record::Entry(&entry), &mut information);
+    let mut parts = session_parts("s", Capacity::PilotInCommand);
+    parts.approaches.push(an_approach());
+    let session = Entry::new(parts).unwrap();
+    let answers = json!({"session": true, "approach": true, "follow_up": true});
+    let mut information = AuthoritySpecificInformation::new(answers.clone());
+    questions.drop_hidden_answers_for(Record::Entry(&session), &mut information);
+    assert_eq!(information.value(), &answers);
+}
+
+#[test]
+fn an_answer_is_removed_with_its_follow_up_once_the_approach_is_removed() {
+    let questions = with_record_questions();
+    let mut parts = flight_parts("e", Capacity::PilotInCommand);
+    parts.approaches.push(an_approach());
+    let answers = json!({"approach": true, "follow_up": true});
+    let mut information = AuthoritySpecificInformation::new(answers.clone());
+    let approached = Entry::new(parts.clone()).unwrap();
+    questions.drop_hidden_answers_for(Record::Entry(&approached), &mut information);
+    assert_eq!(information.value(), &answers);
+
+    parts.approaches.clear();
+    let without = Entry::new(parts).unwrap();
+    questions.drop_hidden_answers_for(Record::Entry(&without), &mut information);
     assert_eq!(information.value(), &json!({}));
 }
