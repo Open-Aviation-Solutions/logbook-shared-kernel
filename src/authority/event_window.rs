@@ -5,12 +5,13 @@
 //! The bookkeeping that "N events in a look-back" checks share.
 
 use std::collections::BTreeMap;
-use std::ops::Bound::{Excluded, Unbounded};
 
 use time::{Date, Duration};
 
 use super::currency::{Contribution, CurrencyResult};
-use super::window::{add_months_clamped, months_on};
+use super::window::{
+    add_months_clamped, count_of_counts_in_window, months_on, nth_most_recent_of_counts,
+};
 use crate::entry::{Assessment, AssessmentId, Entry, EntryId};
 
 /// How far back a check looks: a number of days, or of calendar months.
@@ -48,7 +49,9 @@ impl LookBack {
 /// entries or assessments that fall inside the look-back window.
 ///
 /// It keeps a count for each date, not a date for each event, so a count
-/// from a pilot's answer, however large, is never expanded.
+/// from a pilot's answer, however large, is never expanded. Counts add up
+/// saturating at `usize::MAX` (32 bits on `wasm32`), so `found` and a
+/// contribution's `events` stop there rather than overflow.
 ///
 /// An authority writes a check as an accumulator that decides which events
 /// of an entry or assessment qualify, records them here, and answers
@@ -141,21 +144,6 @@ impl EventWindow {
         *events = events.saturating_add(count);
     }
 
-    /// The date of the `required`-th most recent event, which the check
-    /// expires from. It is taken over every event, not only those in the
-    /// look-back, so a result can say both "expires on X" and "expired on X".
-    /// `None` when there are fewer events than that, or none are required.
-    fn date_of_required_event(&self) -> Option<Date> {
-        if self.required == 0 {
-            return None;
-        }
-        let mut seen: usize = 0;
-        self.events_on.iter().rev().find_map(|(on, events)| {
-            seen = seen.saturating_add(*events);
-            (seen >= self.required).then_some(*on)
-        })
-    }
-
     /// The check's result, from what has been recorded.
     pub fn result(&self) -> CurrencyResult {
         let mut qualifying = self.qualifying.clone();
@@ -163,16 +151,21 @@ impl EventWindow {
         let mut qualifying_assessments = self.qualifying_assessments.clone();
         qualifying_assessments.sort();
         CurrencyResult {
-            expiry_date: self
-                .date_of_required_event()
-                .and_then(|date| self.look_back.expiry(date)),
+            expiry_date: nth_most_recent_of_counts(
+                self.events_on
+                    .iter()
+                    .rev()
+                    .map(|(on, events)| (*on, *events)),
+                self.required,
+            )
+            .and_then(|date| self.look_back.expiry(date)),
             reference: self.reference,
             qualifying,
             qualifying_assessments,
-            found: self
-                .events_on
-                .range((Excluded(self.cutoff), Unbounded))
-                .fold(0, |found: usize, (_, events)| found.saturating_add(*events)),
+            found: count_of_counts_in_window(
+                self.events_on.iter().map(|(on, events)| (*on, *events)),
+                self.cutoff,
+            ),
             required: self.required,
             look_back_days: (self.reference - self.cutoff).whole_days(),
         }
@@ -308,13 +301,36 @@ mod tests {
         let mut window = EventWindow::new(REFERENCE, 90, 3);
         window.record(&entry("a", REFERENCE - Duration::days(10)), 2);
         window.record(&entry("b", REFERENCE - Duration::days(20)), 2);
-        window.record(&entry("c", REFERENCE - Duration::days(100)), 5);
         let result = window.result();
         assert_eq!(result.found, 4);
         assert_eq!(
             result.expiry_date,
             Some(REFERENCE - Duration::days(20) + Duration::days(90))
         );
+    }
+
+    #[test]
+    fn the_event_that_makes_up_the_number_can_be_outside_the_look_back() {
+        let mut window = EventWindow::new(REFERENCE, 90, 3);
+        window.record(&entry("a", REFERENCE - Duration::days(10)), 1);
+        window.record(&entry("c", REFERENCE - Duration::days(100)), 5);
+        let result = window.result();
+        assert_eq!(result.found, 1);
+        assert_eq!(
+            result.expiry_date,
+            Some(REFERENCE - Duration::days(100) + Duration::days(90))
+        );
+        assert!(!result.is_current());
+    }
+
+    #[test]
+    fn a_count_of_zero_records_nothing_and_none_required_never_expires() {
+        let mut window = EventWindow::new(REFERENCE, 90, 0);
+        window.record(&entry("a", REFERENCE), 0);
+        let result = window.result();
+        assert_eq!(result.found, 0);
+        assert_eq!(result.qualifying, []);
+        assert_eq!(result.expiry_date, None);
     }
 
     #[test]
