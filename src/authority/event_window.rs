@@ -4,10 +4,13 @@
 
 //! The bookkeeping that "N events in a look-back" checks share.
 
+use std::collections::BTreeMap;
+use std::ops::Bound::{Excluded, Unbounded};
+
 use time::{Date, Duration};
 
 use super::currency::{Contribution, CurrencyResult};
-use super::window::{add_months_clamped, count_in_window, months_on, nth_most_recent};
+use super::window::{add_months_clamped, months_on};
 use crate::entry::{Assessment, AssessmentId, Entry, EntryId};
 
 /// How far back a check looks: a number of days, or of calendar months.
@@ -41,8 +44,11 @@ impl LookBack {
 }
 
 /// The bookkeeping every "N events in D days" (or "in M months") check shares:
-/// every qualifying event date ever seen, and the entries or assessments that
-/// fall inside the look-back window.
+/// how many qualifying events there were on each date ever seen, and the
+/// entries or assessments that fall inside the look-back window.
+///
+/// It keeps a count for each date, not a date for each event, so a count
+/// from a pilot's answer, however large, is never expanded.
 ///
 /// An authority writes a check as an accumulator that decides which events
 /// of an entry or assessment qualify, records them here, and answers
@@ -53,7 +59,7 @@ pub struct EventWindow {
     cutoff: Date,
     look_back: LookBack,
     required: usize,
-    event_dates: Vec<Date>,
+    events_on: BTreeMap<Date, usize>,
     qualifying: Vec<Contribution>,
     qualifying_assessments: Vec<AssessmentId>,
 }
@@ -76,7 +82,7 @@ impl EventWindow {
             cutoff: look_back.cutoff(reference),
             look_back,
             required,
-            event_dates: Vec::new(),
+            events_on: BTreeMap::new(),
             qualifying: Vec::new(),
             qualifying_assessments: Vec::new(),
         }
@@ -95,8 +101,11 @@ impl EventWindow {
         if on > self.reference {
             return;
         }
-        self.event_dates.extend(std::iter::repeat_n(on, count));
-        if count > 0 && on > self.cutoff {
+        if count == 0 {
+            return;
+        }
+        self.add_events(on, count);
+        if on > self.cutoff {
             // An entry recorded more than once is one contribution, with
             // all its events.
             match self
@@ -121,10 +130,30 @@ impl EventWindow {
         if assessment.date > self.reference {
             return;
         }
-        self.event_dates.push(assessment.date);
+        self.add_events(assessment.date, 1);
         if assessment.date > self.cutoff {
             self.qualifying_assessments.push(assessment.id.clone());
         }
+    }
+
+    fn add_events(&mut self, on: Date, count: usize) {
+        let events = self.events_on.entry(on).or_insert(0);
+        *events = events.saturating_add(count);
+    }
+
+    /// The date of the `required`-th most recent event, which the check
+    /// expires from. It is taken over every event, not only those in the
+    /// look-back, so a result can say both "expires on X" and "expired on X".
+    /// `None` when there are fewer events than that, or none are required.
+    fn date_of_required_event(&self) -> Option<Date> {
+        if self.required == 0 {
+            return None;
+        }
+        let mut seen: usize = 0;
+        self.events_on.iter().rev().find_map(|(on, events)| {
+            seen = seen.saturating_add(*events);
+            (seen >= self.required).then_some(*on)
+        })
     }
 
     /// The check's result, from what has been recorded.
@@ -134,12 +163,16 @@ impl EventWindow {
         let mut qualifying_assessments = self.qualifying_assessments.clone();
         qualifying_assessments.sort();
         CurrencyResult {
-            expiry_date: nth_most_recent(&self.event_dates, self.required)
+            expiry_date: self
+                .date_of_required_event()
                 .and_then(|date| self.look_back.expiry(date)),
             reference: self.reference,
             qualifying,
             qualifying_assessments,
-            found: count_in_window(&self.event_dates, self.cutoff),
+            found: self
+                .events_on
+                .range((Excluded(self.cutoff), Unbounded))
+                .fold(0, |found: usize, (_, events)| found.saturating_add(*events)),
             required: self.required,
             look_back_days: (self.reference - self.cutoff).whole_days(),
         }
@@ -252,6 +285,36 @@ mod tests {
             }]
         );
         assert!(result.is_current());
+    }
+
+    #[test]
+    fn a_large_count_is_reported_as_recorded() {
+        let mut window = EventWindow::new(REFERENCE, 90, 3);
+        window.record(&entry("a", REFERENCE), 4_000_000_000);
+        let result = window.result();
+        assert_eq!(result.found, 4_000_000_000);
+        assert_eq!(
+            result.qualifying,
+            [Contribution {
+                entry: EntryId::new("a"),
+                events: 4_000_000_000
+            }]
+        );
+        assert_eq!(result.expiry_date, Some(REFERENCE + Duration::days(90)));
+    }
+
+    #[test]
+    fn the_check_expires_from_the_date_of_the_event_that_makes_up_the_number_required() {
+        let mut window = EventWindow::new(REFERENCE, 90, 3);
+        window.record(&entry("a", REFERENCE - Duration::days(10)), 2);
+        window.record(&entry("b", REFERENCE - Duration::days(20)), 2);
+        window.record(&entry("c", REFERENCE - Duration::days(100)), 5);
+        let result = window.result();
+        assert_eq!(result.found, 4);
+        assert_eq!(
+            result.expiry_date,
+            Some(REFERENCE - Duration::days(20) + Duration::days(90))
+        );
     }
 
     #[test]
