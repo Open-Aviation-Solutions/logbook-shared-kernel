@@ -198,12 +198,10 @@ pub struct Question {
 /// authority-specific information, under the question's key, so that the
 /// host and the authority agree on it.
 ///
-/// It is `#[non_exhaustive]`, so that a kind of answer added later is not a
-/// breaking release: a consumer that matches on it has a wildcard arm. A
-/// consumer that uses a kind added in a patch requires that patch, as
-/// [`Condition`] says.
+/// Unlike [`Condition`], it is not `#[non_exhaustive]`: a host matches on it
+/// to draw each question, so a kind of answer added later is a breaking
+/// release, and a host does not build until it draws the new kind.
 #[derive(Debug, Clone, PartialEq)]
-#[non_exhaustive]
 pub enum Answer {
     /// One of the choices, stored as its `value`, a string.
     Choice(Vec<Choice>),
