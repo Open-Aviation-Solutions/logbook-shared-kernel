@@ -11,8 +11,8 @@ mod common;
 use common::{assessment, flight, flight_parts, session, session_parts};
 use icao_shared_kernel::{ApproachType, Capacity, LocationIndicator};
 use logbook_shared_kernel::{
-    Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, Condition, Entry,
-    Question, Questions, Record,
+    Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, ChoiceGroup, ChoiceKind,
+    Condition, Entry, Question, Questions, Record,
 };
 use serde_json::{json, Value};
 
@@ -227,6 +227,78 @@ fn a_persons_name_may_not_be_empty() {
             !Answer::Person.accepts(&json!({ "name": name })),
             "{name:?}"
         );
+    }
+}
+
+/// A flight test's purposes, each with its own outcome, as au-casa#60 asks
+/// for them. No label is asserted.
+fn check_purposes() -> Answer {
+    let choice = |value| Choice {
+        value,
+        label: value.into(),
+        regulation: "",
+    };
+    let group = |kind, value| ChoiceGroup {
+        kind: ChoiceKind {
+            value: kind,
+            label: kind.into(),
+        },
+        choices: vec![choice(value)],
+    };
+    Answer::Choices {
+        groups: vec![
+            group("class_rating", "multi_engine_aeroplane_class_rating"),
+            group("operational_rating", "instrument_rating"),
+        ],
+        each: vec![choice("passed"), choice("failed")],
+    }
+}
+
+#[test]
+fn several_choices_each_of_its_kind_answered_once_in_order_are_an_answer() {
+    let purposes = check_purposes();
+    assert!(purposes.accepts(&json!([
+        {"kind": "class_rating", "value": "multi_engine_aeroplane_class_rating", "answer": "passed"},
+        {"kind": "operational_rating", "value": "instrument_rating", "answer": "failed"},
+    ])));
+    assert!(purposes.accepts(&json!([
+        {"kind": "operational_rating", "value": "instrument_rating", "answer": "passed"},
+    ])));
+    let rating = |kind, value, answer| json!({"kind": kind, "value": value, "answer": answer});
+    let instrument = || rating("operational_rating", "instrument_rating", "passed");
+    let multi_engine = || {
+        rating(
+            "class_rating",
+            "multi_engine_aeroplane_class_rating",
+            "passed",
+        )
+    };
+    for choices in [
+        json!([]),
+        json!(null),
+        json!("instrument_rating"),
+        instrument(),
+        json!([instrument(), instrument()]),
+        json!([instrument(), multi_engine()]),
+        json!([
+            instrument(),
+            rating("operational_rating", "instrument_rating", "failed")
+        ]),
+        json!([rating("class_rating", "instrument_rating", "passed")]),
+        json!([rating("operational_rating", "night_vfr_rating", "passed")]),
+        json!([rating("operational_rating", "instrument_rating", "flown")]),
+        json!([{"kind": "operational_rating", "value": "instrument_rating", "answer": null}]),
+        json!([{"kind": "operational_rating", "value": "instrument_rating"}]),
+        json!([{"value": "instrument_rating", "answer": "passed"}]),
+        json!([{
+            "kind": "operational_rating",
+            "value": "instrument_rating",
+            "answer": "passed",
+            "remarks": "",
+        }]),
+        json!(["instrument_rating"]),
+    ] {
+        assert!(!purposes.accepts(&choices), "{choices}");
     }
 }
 
