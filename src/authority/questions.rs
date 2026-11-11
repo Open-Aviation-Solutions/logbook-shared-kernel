@@ -237,10 +237,12 @@ pub enum Answer {
     /// `each` and each group's choices must not be empty (with no `each`, a
     /// required question can never be answered), and a kind's `value` must
     /// be one group's only, and a choice's `value` must appear only once in
-    /// its group. Nothing checks the questions for this.
+    /// its group, and `labels`' `item` and `answer` must not be empty.
+    /// Nothing checks the questions for this.
     ///
-    /// A host draws its parts in `labels`' words, and labels the choice
-    /// within a group with the group's kind's label.
+    /// A host draws its parts in `labels`' words: an item, and the choice of
+    /// its group, by `item`; the choice within a group by the group's kind's
+    /// label; and an item's answer by `answer`.
     Choices {
         groups: Vec<ChoiceGroup>,
         each: Vec<Choice>,
@@ -329,8 +331,8 @@ pub struct Choice {
     pub label: String,
     pub regulation: &'static str,
     /// Whether choosing it is adverse to the pilot, such as a failed
-    /// outcome, so that a host can set it apart without spelling an
-    /// authority's value. It means the same wherever a choice is used: in an
+    /// outcome, whatever the authority's value for it. It means the same
+    /// wherever a choice is used: in an
     /// [`Answer::Choice`], in a [`ChoiceGroup`], or in the `each` of an
     /// [`Answer::Choices`].
     pub adverse: bool,
@@ -343,13 +345,15 @@ impl Choice {
     }
 }
 
-/// The labels of the parts of an [`Answer::Choices`] that a host draws, in
-/// the regulation's words. The choice within a group has none of its own: it
-/// is labelled by its group's [`ChoiceKind`]'s label.
+/// The labels of the parts of an [`Answer::Choices`], in the regulation's
+/// words. The choice within a group has none of its own: it is labelled by
+/// its group's [`ChoiceKind`]'s label.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChoicesLabels {
-    /// What one item is, in the singular, so that a host can draw
-    /// "Add a `item`".
+    /// What one item is, a noun phrase in the singular and in lower case,
+    /// as it reads within a sentence (CASA's "licence, rating or
+    /// endorsement", say, whose groups are licence, class rating and the
+    /// rest). It also labels the choice of an item's group.
     pub item: String,
     /// The label of each item's answer, its choice among `each`.
     pub answer: String,
