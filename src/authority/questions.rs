@@ -238,9 +238,13 @@ pub enum Answer {
     /// required question can never be answered), and a kind's `value` must
     /// be one group's only, and a choice's `value` must appear only once in
     /// its group. Nothing checks the questions for this.
+    ///
+    /// A host draws its parts in `labels`' words, and labels the choice
+    /// within a group with the group's kind's label.
     Choices {
         groups: Vec<ChoiceGroup>,
         each: Vec<Choice>,
+        labels: ChoicesLabels,
     },
 }
 
@@ -267,7 +271,7 @@ impl Answer {
                         .all(|key| key == "name" || key == "licence_number")
             }),
             Self::Count => value.is_u64(),
-            Self::Choices { groups, each } => value
+            Self::Choices { groups, each, .. } => value
                 .as_array()
                 .is_some_and(|items| Self::accepts_choices(groups, each, items)),
         }
@@ -324,6 +328,12 @@ pub struct Choice {
     /// In the regulation's words.
     pub label: String,
     pub regulation: &'static str,
+    /// Whether choosing it is adverse to the pilot, such as a failed
+    /// outcome, so that a host can set it apart without spelling an
+    /// authority's value. It means the same wherever a choice is used: in an
+    /// [`Answer::Choice`], in a [`ChoiceGroup`], or in the `each` of an
+    /// [`Answer::Choices`].
+    pub adverse: bool,
 }
 
 impl Choice {
@@ -331,6 +341,18 @@ impl Choice {
     fn is_one_of(choices: &[Choice], value: &str) -> bool {
         choices.iter().any(|choice| choice.value == value)
     }
+}
+
+/// The labels of the parts of an [`Answer::Choices`] that a host draws, in
+/// the regulation's words. The choice within a group has none of its own: it
+/// is labelled by its group's [`ChoiceKind`]'s label.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChoicesLabels {
+    /// What one item is, in the singular, so that a host can draw
+    /// "Add a `item`".
+    pub item: String,
+    /// The label of each item's answer, its choice among `each`.
+    pub answer: String,
 }
 
 /// The choices of one kind in an [`Answer::Choices`], by which a host may

@@ -23,7 +23,7 @@ pub mod entry;
 
 pub use authority::{
     run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
-    ChoiceGroup, ChoiceKind, Classification, Condition, Contribution, CurrencyCheck,
+    ChoiceGroup, ChoiceKind, ChoicesLabels, Classification, Condition, Contribution, CurrencyCheck,
     CurrencyResult, DateRange, EntryAccumulator, EventWindow, Figure, LicensingAuthority, Measure,
     Problem, ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId, Total,
 };
