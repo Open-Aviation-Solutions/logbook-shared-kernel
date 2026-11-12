@@ -12,7 +12,7 @@ use common::{assessment, flight, flight_parts, session, session_parts};
 use icao_shared_kernel::{ApproachType, Capacity, LocationIndicator};
 use logbook_shared_kernel::{
     Answer, Approach, AuthorityId, AuthoritySpecificInformation, Choice, ChoiceGroup, ChoiceKind,
-    Condition, Entry, Question, Questions, Record,
+    ChoicesLabels, Condition, Entry, Question, Questions, Record,
 };
 use serde_json::{json, Value};
 
@@ -42,12 +42,14 @@ fn casa_picus() -> Questions {
                                 conduct the supervision"
                             .into(),
                         regulation: "61.095(2)",
+                        adverse: false,
                     },
                     Choice {
                         value: "instructor",
                         label: "You are supervised by a flight instructor or flight examiner"
                             .into(),
                         regulation: "61.095(3)",
+                        adverse: false,
                     },
                 ]),
                 applies_when: picus(),
@@ -180,6 +182,7 @@ fn an_answer_is_accepted_only_in_its_kinds_stored_shape() {
         value: "one",
         label: "One".into(),
         regulation: "",
+        adverse: false,
     }]);
     assert!(choice.accepts(&json!("one")));
     assert!(!choice.accepts(&json!("two")));
@@ -233,24 +236,29 @@ fn a_persons_name_may_not_be_empty() {
 /// A flight test's purposes, each with its own outcome, as au-casa#60 asks
 /// for them. No label is asserted.
 fn check_purposes() -> Answer {
-    let choice = |value| Choice {
+    let choice = |value, adverse| Choice {
         value,
         label: value.into(),
         regulation: "",
+        adverse,
     };
     let group = |kind, value| ChoiceGroup {
         kind: ChoiceKind {
             value: kind,
             label: kind.into(),
         },
-        choices: vec![choice(value)],
+        choices: vec![choice(value, false)],
     };
     Answer::Choices {
         groups: vec![
             group("class_rating", "multi_engine_aeroplane_class_rating"),
             group("operational_rating", "instrument_rating"),
         ],
-        each: vec![choice("passed"), choice("failed")],
+        each: vec![choice("passed", false), choice("failed", true)],
+        labels: ChoicesLabels {
+            item: "purpose".into(),
+            answer: "outcome".into(),
+        },
     }
 }
 

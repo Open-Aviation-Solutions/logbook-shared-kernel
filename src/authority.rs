@@ -28,7 +28,9 @@ use crate::entry::{
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
 pub use event_window::EventWindow;
-pub use questions::{Answer, Choice, ChoiceGroup, ChoiceKind, Condition, Question, Questions};
+pub use questions::{
+    Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
+};
 pub use totals::{DateRange, Measure, Total};
 
 /// A licensing authority's rules, as the logbook calls them, for one
