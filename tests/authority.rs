@@ -12,8 +12,8 @@ use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
-    LicensingAuthority, Logbook, Measure, Problem, Questions, Record, Requirement, RequirementId,
-    Subject, Total,
+    LicenceTitleTerm, LicensingAuthority, Logbook, Measure, Problem, Questions, Record,
+    Requirement, RequirementId, Subject, Total,
 };
 use time::Date;
 
@@ -40,6 +40,10 @@ impl LicensingAuthority for FlightsOnly {
         _: &BTreeSet<AircraftCharacteristic>,
     ) -> Option<Classification> {
         None
+    }
+
+    fn licence_titles(&self) -> Vec<LicenceTitleTerm> {
+        Vec::new()
     }
 
     fn requirements(&self) -> Vec<Requirement> {

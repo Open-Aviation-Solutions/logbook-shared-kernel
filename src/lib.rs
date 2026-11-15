@@ -22,11 +22,12 @@ pub mod authority;
 pub mod entry;
 
 pub use authority::{
-    run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, AuthorityTotal,
-    Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Classification, Condition, Contribution,
-    CurrencyCheck, CurrencyResult, DateRange, EntryAccumulator, EventWindow, LicensingAuthority,
-    Measure, Problem, ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId,
-    Term, TermId, Total,
+    licence_title_problems, run, run_assessments, Answer, AssessmentAccumulator,
+    AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels,
+    Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
+    EntryAccumulator, EventWindow, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem,
+    LicenceTitleTerm, LicensingAuthority, Measure, Problem, ProblemAt, ProblemKind, Question,
+    Questions, Requirement, RequirementId, Term, TermId, Total,
 };
 
 pub use entry::{

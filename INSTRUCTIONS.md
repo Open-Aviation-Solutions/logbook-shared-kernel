@@ -30,7 +30,10 @@ wants the records without the interface):
   one object for each authority (`LicensingAuthority::id`); the ids an
   authority gives its terms (`TermId`), shared by its classification of an
   aircraft and its totals, so that the host matches on an id and never on a
-  name; the accumulator and check traits, the event window and
+  name; the titles of licence it issues (`LicenceTitleTerm`: Annex 1's under
+  its own term, or its own with a minimum age), the titles held under a
+  licence (`HeldLicenceTitle`) and the rules over them that hold for any
+  authority (`licence_title_problems`); the accumulator and check traits, the event window and
   `CurrencyResult`, so each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on

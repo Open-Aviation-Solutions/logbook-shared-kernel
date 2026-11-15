@@ -14,6 +14,7 @@
 mod accumulator;
 mod currency;
 mod event_window;
+mod licence_titles;
 mod questions;
 mod totals;
 pub mod window;
@@ -31,6 +32,9 @@ use crate::entry::{
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
 pub use event_window::EventWindow;
+pub use licence_titles::{
+    licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,
+};
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
 };
@@ -70,6 +74,25 @@ pub trait LicensingAuthority {
         aircraft: &AircraftDescription,
         characteristics: &BTreeSet<AircraftCharacteristic>,
     ) -> Option<Classification>;
+
+    /// Every title of licence the authority issues, of either kind: an Annex 1
+    /// title under the authority's own term for it, or one of its own. An
+    /// Annex 1 title left out is one the authority does not issue.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// no title is listed twice, and no two of its own share a term id.
+    fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
+
+    /// The problems with the titles held under one licence of this
+    /// authority's, for a holder born on `date_of_birth`: [`licence_title_problems`]
+    /// over [`licence_titles`](LicensingAuthority::licence_titles).
+    fn licence_title_problems(
+        &self,
+        held: &[HeldLicenceTitle],
+        date_of_birth: Date,
+    ) -> Vec<LicenceTitleProblem> {
+        licence_title_problems(&self.licence_titles(), held, date_of_birth)
+    }
 
     /// The requirements these rules check.
     fn requirements(&self) -> Vec<Requirement>;
