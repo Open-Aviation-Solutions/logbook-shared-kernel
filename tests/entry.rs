@@ -353,7 +353,7 @@ fn another_flight_and_a_session_with_the_same_uuid_have_other_ids() {
 }
 
 #[test]
-fn a_seaplane_or_an_amphibian_implies_floats_and_nothing_else_implies_anything() {
+fn a_seaplane_or_an_amphibian_implies_float_alighting_gear_and_nothing_else_implies_anything() {
     let implied = |airframe| {
         AircraftCharacteristic::implied_by(&AircraftDescription::new(
             airframe,
@@ -361,7 +361,7 @@ fn a_seaplane_or_an_amphibian_implies_floats_and_nothing_else_implies_anything()
             EngineType::Piston,
         ))
     };
-    let floats = BTreeSet::from([AircraftCharacteristic::Floats]);
+    let floats = BTreeSet::from([AircraftCharacteristic::FloatAlightingGear]);
     assert_eq!(implied(AirframeKind::SeaPlane), floats);
     assert_eq!(implied(AirframeKind::Amphibian), floats);
     for airframe in [

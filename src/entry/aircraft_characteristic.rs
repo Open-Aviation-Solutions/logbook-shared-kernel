@@ -37,35 +37,38 @@ pub enum AircraftCharacteristic {
     /// CASA's "multi-engine centre-line thrust" (reg 61.755(2)(e)), whose
     /// aeroplanes are in the single-engine aeroplane class (reg
     /// 61.020(2)(a)).
-    CentreLineThrust,
+    MultiEngineCentreLineThrust,
     /// CASA's "pressurisation system" (reg 61.755(2)(f), (3A)(b), (4)(b),
     /// (5)(a)); the FAA's "pressurized aircraft" (14 CFR 61.31(g)), which
     /// it draws only above a 25,000 ft ceiling; EASA's "with cabin
     /// pressurisation" (GM1 FCL.700).
     PressurisationSystem,
-    /// Floats, on which the aircraft operates on water: CASA's
-    /// "floatplane" for an aeroplane (reg 61.755(2)(g)) and "float
-    /// alighting gear" for a helicopter (reg 61.755(3)(a)). For the FAA
+    /// CASA's "float alighting gear" (reg 61.755(3)(a)), on which the
+    /// aircraft operates on water, for any category: it also covers the
+    /// aeroplane CASA calls a "floatplane" (reg 61.755(2)(g)). For the FAA
     /// (14 CFR 61.5(b)(2)) and EASA (GM1 FCL.700), operating on water is a
     /// class.
-    Floats,
+    FloatAlightingGear,
     /// CASA's "floating hull" (reg 61.755(2)(h)).
     FloatingHull,
     /// CASA's "ski landing gear" (reg 61.755(2)(i)).
-    Skis,
+    SkiLandingGear,
 }
 
 impl AircraftCharacteristic {
     /// The characteristics an aircraft of a type has unless its own record
-    /// says otherwise: what the type's description implies. A host that
-    /// records an aircraft's characteristics uses the recorded set in place
-    /// of this one, not added to it.
+    /// says otherwise: what the type's description implies.
     ///
-    /// A seaplane or an amphibian implies floats; for one with a floating
-    /// hull, its record says so.
+    /// A seaplane or an amphibian implies float alighting gear. A host that
+    /// records an aircraft's characteristics uses the recorded set in place
+    /// of this one, not added to it, so that a record can correct what the
+    /// type implies: one with a floating hull records
+    /// [`FloatingHull`](Self::FloatingHull) and not float alighting gear.
     pub fn implied_by(description: &AircraftDescription) -> BTreeSet<Self> {
         match description.airframe {
-            AirframeKind::SeaPlane | AirframeKind::Amphibian => BTreeSet::from([Self::Floats]),
+            AirframeKind::SeaPlane | AirframeKind::Amphibian => {
+                BTreeSet::from([Self::FloatAlightingGear])
+            }
             AirframeKind::LandPlane
             | AirframeKind::Helicopter
             | AirframeKind::Gyrocopter

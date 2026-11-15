@@ -223,6 +223,11 @@ pub enum ProblemKind {
 
 /// One of an authority's own totals, in a flat list in which each says the
 /// total it is part of.
+///
+/// What a host may rely on in the list [`LicensingAuthority::totals`]
+/// returns, which the authority keeps and nothing checks: each `id` is
+/// unique within the list, and each `part_of` names another total in the
+/// same list, which comes before it, so the totals form no cycle.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AuthorityTotal {
     pub id: TermId,
