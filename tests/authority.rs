@@ -5,13 +5,15 @@
 mod common;
 
 use std::cell::Cell;
+use std::collections::BTreeSet;
 
 use common::{flight, session};
 use icao_shared_kernel::Capacity;
 use logbook_shared_kernel::{
-    run, AircraftDescription, AuthorityId, AuthoritySpecificInformation, Classification,
-    CurrencyResult, DateRange, Entry, EntryAccumulator, Figure, LicensingAuthority, Logbook,
-    Measure, Problem, Questions, Record, Requirement, RequirementId, Subject, Total,
+    run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
+    AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
+    LicensingAuthority, Logbook, Measure, Problem, Questions, Record, Requirement, RequirementId,
+    Subject, Total,
 };
 use time::Date;
 
@@ -32,7 +34,11 @@ impl LicensingAuthority for FlightsOnly {
         matches!(entry.subject(), Subject::Flight { .. })
     }
 
-    fn classify(&self, _: &AircraftDescription) -> Option<Classification> {
+    fn classify(
+        &self,
+        _: &AircraftDescription,
+        _: &BTreeSet<AircraftCharacteristic>,
+    ) -> Option<Classification> {
         None
     }
 
@@ -44,7 +50,7 @@ impl LicensingAuthority for FlightsOnly {
         Vec::new()
     }
 
-    fn totals(&self, _: &Logbook, _: DateRange) -> Vec<Figure> {
+    fn totals(&self, _: &Logbook, _: DateRange) -> Vec<AuthorityTotal> {
         Vec::new()
     }
 

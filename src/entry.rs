@@ -6,6 +6,7 @@
 //! session, in the terms ICAO's Annex 1 defines, with the authority-specific
 //! information of each authority whose rules the pilot logs it under.
 
+mod aircraft_characteristic;
 mod approach;
 mod authority_id;
 mod authority_specific_information;
@@ -15,13 +16,14 @@ mod logbook;
 mod record;
 mod route;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
 use icao_shared_kernel::{Aircraft, AircraftType, Capacity, FlightDuration, FlightRules};
 use time::Date;
 use uuid::Uuid;
 
+pub use aircraft_characteristic::AircraftCharacteristic;
 pub use aircraft_type_descriptions::AircraftDescription;
 pub use approach::Approach;
 pub use authority_id::AuthorityId;
@@ -65,6 +67,8 @@ pub enum Subject {
         /// The description of its type, as the host found it; `None` when
         /// it found none.
         description: Option<AircraftDescription>,
+        /// Its airframe's characteristics, as recorded for the aircraft.
+        characteristics: BTreeSet<AircraftCharacteristic>,
         /// Whether the pilot was "the sole occupant of an aircraft" (Annex 1,
         /// "solo flight time"). Required: a flight has an answer.
         sole_occupant: bool,

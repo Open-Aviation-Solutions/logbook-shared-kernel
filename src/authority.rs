@@ -18,11 +18,14 @@ mod questions;
 mod totals;
 pub mod window;
 
+use std::collections::BTreeSet;
+
 use icao_shared_kernel::FlightDuration;
 use time::Date;
 
 use crate::entry::{
-    AircraftDescription, AuthorityId, AuthoritySpecificInformation, Entry, Logbook, Record,
+    AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation, Entry,
+    Logbook, Record,
 };
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
@@ -52,9 +55,21 @@ pub trait LicensingAuthority {
     /// once, before any accumulator sees an entry.
     fn counts(&self, entry: &Entry) -> bool;
 
-    /// What an aircraft type counts as under these rules, from its
-    /// description. `None`: it cannot say.
-    fn classify(&self, aircraft: &AircraftDescription) -> Option<Classification>;
+    /// What an aircraft counts as under these rules, and what they require
+    /// to fly it, from its type's description and its airframe's
+    /// characteristics. `None`: it cannot say.
+    ///
+    /// A characteristic that the aircraft's category does not use (skis on
+    /// a helicopter, say) is not a problem: it is a physical fact, and the
+    /// rules simply require nothing for it.
+    ///
+    /// A session carries no characteristics, so a session's simulated type
+    /// is classified with an empty set.
+    fn classify(
+        &self,
+        aircraft: &AircraftDescription,
+        characteristics: &BTreeSet<AircraftCharacteristic>,
+    ) -> Option<Classification>;
 
     /// The requirements these rules check.
     fn requirements(&self) -> Vec<Requirement>;
@@ -63,7 +78,7 @@ pub trait LicensingAuthority {
     fn currency(&self, as_of: Date, logbook: &Logbook) -> Vec<(RequirementId, CurrencyResult)>;
 
     /// The authority's own totals of the entries dated in `range`.
-    fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<Figure>;
+    fn totals(&self, logbook: &Logbook, range: DateRange) -> Vec<AuthorityTotal>;
 
     /// The questions the authority asks for its information on `record`,
     /// an entry or an assessment. An authority with nothing to ask about a
@@ -133,12 +148,43 @@ pub struct Requirement {
     pub regulation: &'static str,
 }
 
-/// What an aircraft type counts as under an authority's rules, in its
-/// terms. The host only shows it: the checks that need it are the
-/// authority's own.
+/// Identifies one of an authority's terms: a category or class an aircraft
+/// counts as, something it requires to fly one, or one of its totals. The
+/// authority's, stable, and opaque: the host matches on it, never on a
+/// term's name, so the authority can reword a name freely. Classification
+/// and totals share it, so a total can be identified as one of the
+/// authority's categories, say.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct TermId(String);
+
+impl TermId {
+    pub fn new(id: impl Into<String>) -> Self {
+        Self(id.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+/// One of an authority's terms, identified by its id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Term {
+    pub id: TermId,
+    /// Its name, in the authority's words, for display only.
+    pub name: String,
+}
+
+/// What an aircraft counts as under an authority's rules, and what they
+/// require to fly it, in the authority's terms. The host only shows it: the
+/// checks that need it are the authority's own.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Classification {
-    pub counts_as: Vec<String>,
+    /// Its category and class (CASR 1998 regs 61.015 and 61.020, say).
+    pub counts_as: Vec<Term>,
+    /// What the authority requires for the aircraft beyond its category
+    /// and class: a design feature endorsement (CASR 1998 reg 61.755), say.
+    pub requires: Vec<Term>,
     pub cautions: Vec<String>,
 }
 
@@ -178,10 +224,20 @@ pub enum ProblemKind {
     Warning,
 }
 
-/// One of an authority's own totals.
+/// One of an authority's own totals, in a flat list in which each says the
+/// total it is part of.
+///
+/// What a host may rely on in the list [`LicensingAuthority::totals`]
+/// returns, which the authority keeps and nothing checks: each `id` is
+/// unique within the list, and each `part_of` names another total in the
+/// same list, which comes before it, so the totals form no cycle.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Figure {
-    /// Its name, in the authority's words.
+pub struct AuthorityTotal {
+    pub id: TermId,
+    /// Its name, in the authority's words, for display only.
     pub name: String,
     pub time: FlightDuration,
+    /// The total it is part of: a class of CASR 1998 reg 61.020 under its
+    /// category of reg 61.015, say. `None`: it is part of no other.
+    pub part_of: Option<TermId>,
 }

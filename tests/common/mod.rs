@@ -7,7 +7,7 @@
 // Each test file is its own crate, and uses only some of these.
 #![allow(dead_code)]
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use icao_shared_kernel::{
     Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
@@ -45,6 +45,7 @@ pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
             flight: Uuid::nil(),
             aircraft: c172(),
             description: None,
+            characteristics: BTreeSet::new(),
             sole_occupant: false,
         },
         route: None,

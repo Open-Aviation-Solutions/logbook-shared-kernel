@@ -25,6 +25,7 @@ fn flight(sole_occupant: bool) -> EntryParts {
             flight: Uuid::nil(),
             aircraft: c172(),
             description: None,
+            characteristics: BTreeSet::new(),
             sole_occupant,
         },
         ..flight_parts("e", Capacity::PilotInCommand)
@@ -320,6 +321,7 @@ fn a_flights_entries_share_its_id_whatever_else_they_hold() {
             flight: Uuid::nil(),
             aircraft: c172(),
             description: Some(description()),
+            characteristics: BTreeSet::new(),
             sole_occupant: false,
         },
         ..flight_parts("co-pilot", Capacity::CoPilot)
@@ -333,6 +335,7 @@ fn another_flight_and_a_session_with_the_same_uuid_have_other_ids() {
         flight: Uuid::max(),
         aircraft: c172(),
         description: None,
+        characteristics: BTreeSet::new(),
         sole_occupant: false,
     };
     let ids: BTreeSet<SubjectId> = [flight(false).subject, another_flight, session().subject]

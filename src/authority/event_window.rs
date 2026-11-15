@@ -174,7 +174,7 @@ impl EventWindow {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, BTreeSet};
 
     use icao_shared_kernel::{
         Aircraft, AircraftRegistration, AircraftType, Capacity, FlightDuration, NationalityMark,
@@ -199,6 +199,7 @@ mod tests {
                         .unwrap(),
                 ),
                 description: None,
+                characteristics: BTreeSet::new(),
                 sole_occupant: false,
             },
             route: None,

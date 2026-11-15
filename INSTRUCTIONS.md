@@ -20,11 +20,18 @@ wants the records without the interface):
   (which `Questions` reads to decide which questions apply), and the questions'
   version under the reserved key `_version`
   (`AuthoritySpecificInformation::VERSION_KEY`), which no question may use;
-  and the neutral description of an aircraft type.
+  the neutral description of an aircraft type; and the characteristics of
+  an aircraft's airframe (`AircraftCharacteristic`): the physical facts that
+  any authority's rules may use and that the description does not give, as
+  recorded for the aircraft (nothing implies them). A fact the description
+  gives stays in the description, and a characteristic is added only when
+  an authority needs it.
 - **`authority`**: the trait an authority implements to supply its rules,
-  one object for each authority (`LicensingAuthority::id`); the
-  accumulator and check traits, the event window and `CurrencyResult`, so
-  each authority writes its currency checks over the same machinery; and the
+  one object for each authority (`LicensingAuthority::id`); the ids an
+  authority gives its terms (`TermId`), shared by its classification of an
+  aircraft and its totals, so that the host matches on an id and never on a
+  name; the accumulator and check traits, the event window and
+  `CurrencyResult`, so each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on
   a user interface.
@@ -42,12 +49,31 @@ which is this crate's, as
 [#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
 settled), and any user interface.
 
+The aircraft's characteristics are not one State's rules, even where only
+one State's rules use a characteristic so far. The kernel records the
+physical characteristics of an airframe that any authority may use, each
+named in the words of a regulation that uses it and citing the rules that
+do; what an authority requires for them is the authority's own, given
+through `classify`. So a characteristic only CASA's rules use yet (ski
+landing gear, say) is in scope, and CASA's design feature endorsement for it
+is not.
+
 ## Conventions
 
 - **Discuss before implementing** non-trivial design changes.
 - **Regulatory terms only**: names and terminology must be verifiable against
   ICAO's Annex 1 for the common entry, and against the regulation an example or
   test quotes. A name that no regulation uses is not introduced.
+- **Cite only what has been read.** A citation in a doc comment is checked
+  against the rule's own text, not a summary of it, and one that cannot be
+  checked is left out. Where the texts are:
+  - CASA: Part 61 of CASR 1998, in pilot-logbook's `docs/part61/`
+    (`part61-legislation.md`).
+  - FAA: 14 CFR on eCFR (ecfr.gov, which also has an API), e.g. 61.1(b)'s
+    definitions and 61.31's additional training.
+  - EASA: the Easy Access Rules for Aircrew (Part-FCL) on easa.europa.eu, a
+    PDF with the AMC and GM, e.g. GM1 FCL.700's table (a) of class ratings and
+    their differences training.
 - **The MPL notice heads each file** in `src/`, `tests/`, the `Makefile`,
   `Cargo.toml` and the workflows (the licence's Exhibit A, in that file's
   comment syntax); `addlicense -l mpl <file>` adds it. `make license-check`,

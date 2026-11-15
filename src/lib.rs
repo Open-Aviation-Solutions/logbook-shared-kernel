@@ -22,14 +22,15 @@ pub mod authority;
 pub mod entry;
 
 pub use authority::{
-    run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, Choice,
-    ChoiceGroup, ChoiceKind, ChoicesLabels, Classification, Condition, Contribution, CurrencyCheck,
-    CurrencyResult, DateRange, EntryAccumulator, EventWindow, Figure, LicensingAuthority, Measure,
-    Problem, ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId, Total,
+    run, run_assessments, Answer, AssessmentAccumulator, AssessmentCurrencyCheck, AuthorityTotal,
+    Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Classification, Condition, Contribution,
+    CurrencyCheck, CurrencyResult, DateRange, EntryAccumulator, EventWindow, LicensingAuthority,
+    Measure, Problem, ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId,
+    Term, TermId, Total,
 };
 
 pub use entry::{
-    AircraftDescription, Approach, ApproachType, Assessment, AssessmentId, AuthorityId,
-    AuthoritySpecificInformation, DayNight, Entry, EntryError, EntryId, EntryParts, InstrumentTime,
-    Logbook, Record, RnpApchMinima, Route, Subject, SubjectId,
+    AircraftCharacteristic, AircraftDescription, Approach, ApproachType, Assessment, AssessmentId,
+    AuthorityId, AuthoritySpecificInformation, DayNight, Entry, EntryError, EntryId, EntryParts,
+    InstrumentTime, Logbook, Record, RnpApchMinima, Route, Subject, SubjectId,
 };
