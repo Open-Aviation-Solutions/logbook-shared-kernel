@@ -53,6 +53,13 @@ impl LicensingAuthority for Example {
                 },
                 minimum_age: 16,
             },
+            LicenceTitleTerm::National {
+                term: Term {
+                    id: TermId::new("older"),
+                    name: "older licence".into(),
+                },
+                minimum_age: 17,
+            },
         ]
     }
 
@@ -145,15 +152,27 @@ fn a_national_title_the_authority_does_not_list_is_not_issued() {
 }
 
 #[test]
-fn a_title_listed_twice_is_reported_once_whatever_its_dates() {
+fn a_title_listed_more_than_once_is_reported_once_and_each_listing_is_aged() {
+    // Born 2004-06-15: 16 on 2020-06-15.
     let problems = authority().licence_title_problems(
         &[
-            held(own(), date!(2020 - 01 - 01)),
             held(own(), date!(2021 - 01 - 01)),
+            held(own(), date!(2019 - 01 - 01)),
+            held(own(), date!(2022 - 01 - 01)),
         ],
-        date!(2000 - 01 - 01),
+        date!(2004 - 06 - 15),
     );
-    assert_eq!(problems, [LicenceTitleProblem::Repeated(own())]);
+    assert_eq!(
+        problems,
+        [
+            LicenceTitleProblem::Repeated(own()),
+            LicenceTitleProblem::BeforeMinimumAge {
+                title: own(),
+                date_of_first_issue: date!(2019 - 01 - 01),
+                minimum_age: 16,
+            }
+        ]
+    );
 }
 
 #[test]
@@ -176,18 +195,14 @@ fn a_national_title_first_issued_before_the_minimum_age_is_reported() {
 }
 
 #[test]
-fn a_year_is_complete_on_the_birthday_of_one_born_on_29_february() {
-    // Born 2004-02-29: 16 on 2020-02-29, and in 2021 on 1 March.
+fn a_year_is_complete_on_1_march_for_one_born_on_29_february() {
+    // Born 2004-02-29: 17 on 2021-03-01, not on 2021-02-28.
+    let born = date!(2004 - 02 - 29);
+    let older = LicenceTitleId::National(TermId::new("older"));
     let authority = authority();
-    assert_eq!(
-        authority
-            .licence_title_problems(&[held(own(), date!(2020 - 02 - 28))], date!(2004 - 02 - 29))
-            .len(),
-        1
-    );
-    assert_eq!(
-        authority
-            .licence_title_problems(&[held(own(), date!(2020 - 02 - 29))], date!(2004 - 02 - 29)),
-        []
-    );
+    let problems = |on| authority.licence_title_problems(&[held(older.clone(), on)], born);
+    assert_eq!(problems(date!(2021 - 02 - 28)).len(), 1);
+    assert_eq!(problems(date!(2021 - 03 - 01)), []);
+    // Before the birth the holder is not yet any age.
+    assert_eq!(problems(date!(2003 - 01 - 01)).len(), 1);
 }

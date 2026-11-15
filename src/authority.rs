@@ -80,7 +80,8 @@ pub trait LicensingAuthority {
     /// Annex 1 title left out is one the authority does not issue.
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
-    /// no title is listed twice, and no two of its own share a term id.
+    /// no title is listed twice, and no two titles, Annex 1's and its own alike,
+    /// share a term id.
     fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
 
     /// The problems with the titles held under one licence of this
@@ -172,7 +173,7 @@ pub struct Requirement {
 }
 
 /// Identifies one of an authority's terms: a category or class an aircraft
-/// counts as, something it requires to fly one, or one of its totals. The
+/// counts as, something it requires to fly one, one of its totals, or a title of licence. The
 /// authority's, stable, and opaque: the host matches on it, never on a
 /// term's name, so the authority can reword a name freely. Classification
 /// and totals share it, so a total can be identified as one of the

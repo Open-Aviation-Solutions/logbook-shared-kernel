@@ -22,8 +22,8 @@ use super::{Term, TermId};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LicenceTitleTerm {
     /// One of Annex 1's, with the authority's own term for it. Its minimum
-    /// age is Annex 1's, which icao-shared-kernel's `Pilot` checks for the
-    /// titles it holds.
+    /// age is checked by icao-shared-kernel's `Pilot`, with the State's ages
+    /// where they differ from Annex 1's (`MinimumAges`), not here.
     Annex1 { title: LicenceTitle, term: Term },
     /// One of the authority's own, which Annex 1 has no title for.
     National {
@@ -40,6 +40,14 @@ impl LicenceTitleTerm {
         match self {
             Self::Annex1 { title, .. } => LicenceTitleId::Annex1(*title),
             Self::National { term, .. } => LicenceTitleId::National(term.id.clone()),
+        }
+    }
+
+    fn matches(&self, id: &LicenceTitleId) -> bool {
+        match (self, id) {
+            (Self::Annex1 { title, .. }, LicenceTitleId::Annex1(other)) => title == other,
+            (Self::National { term, .. }, LicenceTitleId::National(other)) => &term.id == other,
+            _ => false,
         }
     }
 
@@ -93,7 +101,9 @@ pub enum LicenceTitleProblem {
     /// more than one date of first issue.
     Repeated(LicenceTitleId),
     /// The holder had not reached the title's minimum age on its date of
-    /// first issue. Only the authority's own titles are checked here.
+    /// first issue. Only the authority's own titles are checked here: an
+    /// Annex 1 title's age is checked by icao-shared-kernel's `Pilot`, with
+    /// the State's ages where they differ from Annex 1's.
     BeforeMinimumAge {
         title: LicenceTitleId,
         date_of_first_issue: Date,
@@ -105,6 +115,11 @@ pub enum LicenceTitleProblem {
 /// titles its authority issues, for a holder born on `date_of_birth`, in the
 /// order the titles are listed. [`LicensingAuthority::licence_title_problems`]
 /// is this over the authority's own titles.
+///
+/// Only the authority's own titles' ages are checked here, so this is not the
+/// whole age check: an Annex 1 title's is icao-shared-kernel's `Pilot`'s, with
+/// the State's ages where they differ from Annex 1's. A title listed more
+/// than once is reported as repeated once, and each listing's age is checked.
 ///
 /// A year is complete on the birthday, compared by month and day: someone born
 /// on 29 February completes a year on 1 March in a year that is not a leap
@@ -119,14 +134,15 @@ pub fn licence_title_problems(
     date_of_birth: Date,
 ) -> Vec<LicenceTitleProblem> {
     let mut seen = BTreeSet::new();
+    let mut reported = BTreeSet::new();
     let mut problems = Vec::new();
     for title in held {
-        if !seen.insert(title.title.clone()) {
+        let first = seen.insert(&title.title);
+        if !first && reported.insert(&title.title) {
             problems.push(LicenceTitleProblem::Repeated(title.title.clone()));
-            continue;
         }
-        match issued.iter().find(|term| term.id() == title.title) {
-            None => problems.push(LicenceTitleProblem::NotIssued(title.title.clone())),
+        match issued.iter().find(|term| term.matches(&title.title)) {
+            None if first => problems.push(LicenceTitleProblem::NotIssued(title.title.clone())),
             Some(LicenceTitleTerm::National { minimum_age, .. })
                 if age_on(date_of_birth, title.date_of_first_issue) < i32::from(*minimum_age) =>
             {
@@ -136,13 +152,14 @@ pub fn licence_title_problems(
                     minimum_age: *minimum_age,
                 });
             }
-            Some(_) => {}
+            _ => {}
         }
     }
     problems
 }
 
-/// Whole years completed on `on` by someone born on `born`.
+/// Whole years completed on `on` by someone born on `born`; negative before
+/// the birth. A copy of icao-shared-kernel's, which does not export it.
 fn age_on(born: Date, on: Date) -> i32 {
     let years = on.year() - born.year();
     if (u8::from(on.month()), on.day()) < (u8::from(born.month()), born.day()) {
