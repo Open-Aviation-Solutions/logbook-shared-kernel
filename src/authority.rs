@@ -92,6 +92,11 @@ pub trait LicensingAuthority {
     /// the Annex 1 titles' ages (`Licence::new` refuses a title listed twice).
     /// The own titles' ages are in
     /// [`licence_titles`](LicensingAuthority::licence_titles).
+    ///
+    /// `Pilot::with_minimum_ages` applies one table to every licence, so a
+    /// pilot holding licences from authorities whose ages differ cannot yet
+    /// have each checked against its own authority's
+    /// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
     fn minimum_ages(&self) -> MinimumAges;
 
     /// The problems with the titles under one licence of this authority's, for

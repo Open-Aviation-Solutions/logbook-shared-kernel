@@ -182,7 +182,8 @@ pub fn licence_title_problems(
 }
 
 /// Whole years completed on `on` by someone born on `born`; negative before
-/// the birth. A copy of icao-shared-kernel's, which does not export it.
+/// the birth. A copy of icao-shared-kernel's, which does not export it yet
+/// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
 fn age_on(born: Date, on: Date) -> i32 {
     let years = on.year() - born.year();
     if (u8::from(on.month()), on.day()) < (u8::from(born.month()), born.day()) {
