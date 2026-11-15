@@ -42,6 +42,7 @@ What it holds, in two modules:
 - **`authority`**: the trait an authority implements, one implementation
   built once (one object) for each authority it serves (whether an entry
   counts under its rules, what an aircraft counts as and what it requires,
+  the titles of licence it issues and its minimum ages, with the rules over the titles a pilot holds,
   its requirements and their currency, its own totals, the questions it asks about an entry or an assessment
   and the problems with its answers); the machinery its currency checks are
   written over; and the description of those questions, as data for the host

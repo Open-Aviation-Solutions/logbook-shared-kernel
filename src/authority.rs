@@ -14,13 +14,14 @@
 mod accumulator;
 mod currency;
 mod event_window;
+mod licence_titles;
 mod questions;
 mod totals;
 pub mod window;
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::FlightDuration;
+use icao_shared_kernel::{FlightDuration, Licence, MinimumAges};
 use time::Date;
 
 use crate::entry::{
@@ -31,6 +32,9 @@ use crate::entry::{
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
 pub use event_window::EventWindow;
+pub use licence_titles::{
+    licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,
+};
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
 };
@@ -70,6 +74,46 @@ pub trait LicensingAuthority {
         aircraft: &AircraftDescription,
         characteristics: &BTreeSet<AircraftCharacteristic>,
     ) -> Option<Classification>;
+
+    /// Every title of licence the authority issues, of either kind: an Annex 1
+    /// title under the authority's own term for it, or one of its own. An
+    /// Annex 1 title left out is one the authority does not issue.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// no title is listed twice, and no two titles, Annex 1's and its own alike,
+    /// share a term id.
+    fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
+
+    /// The minimum age at which each Annex 1 title is first issued, under
+    /// these rules: required, so an authority states its ages even where they
+    /// are Annex 1's ([`MinimumAges::default`]). A host builds the
+    /// [`Pilot`](icao_shared_kernel::Pilot) with
+    /// `Pilot::with_minimum_ages(…, &authority.minimum_ages())`, which checks
+    /// the Annex 1 titles' ages (`Licence::new` refuses a title listed twice).
+    /// The own titles' ages are in
+    /// [`licence_titles`](LicensingAuthority::licence_titles).
+    ///
+    /// `Pilot::with_minimum_ages` applies one table to every licence, so a
+    /// pilot holding licences from authorities whose ages differ cannot yet
+    /// have each checked against its own authority's
+    /// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
+    fn minimum_ages(&self) -> MinimumAges;
+
+    /// The problems with the titles under one licence of this authority's, for
+    /// a holder born on `date_of_birth`, `own` being the authority's own titles
+    /// held under it. `licence` must be one this authority issued
+    /// ([`AuthorityId::of`] the licence is [`id`](LicensingAuthority::id)):
+    /// it is not checked, and another authority's would be checked against
+    /// these titles. [`licence_title_problems`] over
+    /// [`licence_titles`](LicensingAuthority::licence_titles).
+    fn licence_title_problems(
+        &self,
+        licence: &Licence,
+        own: &[HeldLicenceTitle],
+        date_of_birth: Date,
+    ) -> Vec<LicenceTitleProblem> {
+        licence_title_problems(&self.licence_titles(), licence, own, date_of_birth)
+    }
 
     /// The requirements these rules check.
     fn requirements(&self) -> Vec<Requirement>;
@@ -149,7 +193,7 @@ pub struct Requirement {
 }
 
 /// Identifies one of an authority's terms: a category or class an aircraft
-/// counts as, something it requires to fly one, or one of its totals. The
+/// counts as, something it requires to fly one, one of its totals, or a title of licence. The
 /// authority's, stable, and opaque: the host matches on it, never on a
 /// term's name, so the authority can reword a name freely. Classification
 /// and totals share it, so a total can be identified as one of the
