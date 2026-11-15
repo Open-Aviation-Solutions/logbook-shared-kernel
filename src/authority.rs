@@ -89,13 +89,17 @@ pub trait LicensingAuthority {
     /// are Annex 1's ([`MinimumAges::default`]). A host builds the
     /// [`Pilot`](icao_shared_kernel::Pilot) with
     /// `Pilot::with_minimum_ages(…, &authority.minimum_ages())`, which checks
-    /// the Annex 1 titles' ages and repeats. The own titles' ages are in
+    /// the Annex 1 titles' ages (`Licence::new` refuses a title listed twice).
+    /// The own titles' ages are in
     /// [`licence_titles`](LicensingAuthority::licence_titles).
     fn minimum_ages(&self) -> MinimumAges;
 
     /// The problems with the titles under one licence of this authority's, for
     /// a holder born on `date_of_birth`, `own` being the authority's own titles
-    /// held under it: [`licence_title_problems`] over
+    /// held under it. `licence` must be one this authority issued
+    /// ([`AuthorityId::of`] the licence is [`id`](LicensingAuthority::id)):
+    /// it is not checked, and another authority's would be checked against
+    /// these titles. [`licence_title_problems`] over
     /// [`licence_titles`](LicensingAuthority::licence_titles).
     fn licence_title_problems(
         &self,

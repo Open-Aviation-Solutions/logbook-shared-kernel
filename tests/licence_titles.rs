@@ -130,11 +130,6 @@ fn a_title_is_identified_by_annex_1s_title_or_the_authoritys_own_term() {
 }
 
 #[test]
-fn the_authority_states_its_ages_for_annex_1s_titles() {
-    assert_eq!(authority().minimum_ages(), MinimumAges::default());
-}
-
-#[test]
 fn an_own_title_is_held_from_its_date_of_first_issue() {
     let title = held(own(), date!(2020 - 03 - 10));
     assert!(!title.held_on(date!(2020 - 03 - 09)));

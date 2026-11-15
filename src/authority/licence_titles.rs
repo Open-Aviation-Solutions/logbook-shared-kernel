@@ -68,7 +68,9 @@ pub enum LicenceTitleId {
 /// Only the authority's own titles are held here. A held Annex 1 title is
 /// icao-shared-kernel's `IssuedTitle` in the `Licence`'s titles, and "held on
 /// a date" for it is `IssuedTitle::date_of_first_issue` on or before the date,
-/// as [`held_on`](HeldLicenceTitle::held_on) is for an own title.
+/// as [`held_on`](HeldLicenceTitle::held_on) is for an own title. An Annex 1
+/// title is never recorded here: an own title whose id is an Annex 1 title's
+/// term id is reported as not issued.
 ///
 /// There is no expiry or suspension to record yet.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -120,8 +122,8 @@ pub enum LicenceTitleProblem {
 ///
 /// Not the whole age check: an Annex 1 title's age is checked by
 /// icao-shared-kernel's `Pilot`, built with the authority's
-/// [`minimum_ages`](super::LicensingAuthority::minimum_ages), and so are
-/// repeats among the licence's Annex 1 titles.
+/// [`minimum_ages`](super::LicensingAuthority::minimum_ages), and
+/// `Licence::new` refuses an Annex 1 title listed twice.
 ///
 /// A year is complete on the birthday, compared by month and day: someone born
 /// on 29 February completes a year on 1 March in a year that is not a leap
