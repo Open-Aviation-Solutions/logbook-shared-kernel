@@ -64,6 +64,16 @@ is not.
 - **Regulatory terms only**: names and terminology must be verifiable against
   ICAO's Annex 1 for the common entry, and against the regulation an example or
   test quotes. A name that no regulation uses is not introduced.
+- **Cite only what has been read.** A citation in a doc comment is checked
+  against the rule's own text, not a summary of it, and one that cannot be
+  checked is left out. Where the texts are:
+  - CASA: Part 61 of CASR 1998, in pilot-logbook's `docs/part61/`
+    (`part61-legislation.md`).
+  - FAA: 14 CFR on eCFR (ecfr.gov, which also has an API), e.g. 61.1(b)'s
+    definitions and 61.31's additional training.
+  - EASA: the Easy Access Rules for Aircrew (Part-FCL) on easa.europa.eu, a
+    PDF with the AMC and GM, e.g. GM1 FCL.700's table (a) of class ratings and
+    their differences training.
 - **The MPL notice heads each file** in `src/`, `tests/`, the `Makefile`,
   `Cargo.toml` and the workflows (the licence's Exhibit A, in that file's
   comment syntax); `addlicense -l mpl <file>` adds it. `make license-check`,
