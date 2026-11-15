@@ -8,8 +8,8 @@ use aircraft_type_descriptions::{AirframeKind, EngineType};
 use common::{c172, flight_parts, session_parts};
 use icao_shared_kernel::{AircraftType, Capacity, FlightDuration, LocationIndicator};
 use logbook_shared_kernel::{
-    AircraftDescription, Approach, ApproachType, Entry, EntryError, EntryParts, InstrumentTime,
-    Subject, SubjectId,
+    AircraftCharacteristic, AircraftDescription, Approach, ApproachType, Entry, EntryError,
+    EntryParts, InstrumentTime, Subject, SubjectId,
 };
 use std::collections::BTreeSet;
 use uuid::Uuid;
@@ -25,6 +25,7 @@ fn flight(sole_occupant: bool) -> EntryParts {
             flight: Uuid::nil(),
             aircraft: c172(),
             description: None,
+            characteristics: BTreeSet::new(),
             sole_occupant,
         },
         ..flight_parts("e", Capacity::PilotInCommand)
@@ -320,6 +321,7 @@ fn a_flights_entries_share_its_id_whatever_else_they_hold() {
             flight: Uuid::nil(),
             aircraft: c172(),
             description: Some(description()),
+            characteristics: BTreeSet::new(),
             sole_occupant: false,
         },
         ..flight_parts("co-pilot", Capacity::CoPilot)
@@ -333,6 +335,7 @@ fn another_flight_and_a_session_with_the_same_uuid_have_other_ids() {
         flight: Uuid::max(),
         aircraft: c172(),
         description: None,
+        characteristics: BTreeSet::new(),
         sole_occupant: false,
     };
     let ids: BTreeSet<SubjectId> = [flight(false).subject, another_flight, session().subject]
@@ -347,4 +350,28 @@ fn another_flight_and_a_session_with_the_same_uuid_have_other_ids() {
             SubjectId::Session(Uuid::nil()),
         ])
     );
+}
+
+#[test]
+fn a_seaplane_or_an_amphibian_implies_floats_and_nothing_else_implies_anything() {
+    let implied = |airframe| {
+        AircraftCharacteristic::implied_by(&AircraftDescription::new(
+            airframe,
+            1,
+            EngineType::Piston,
+        ))
+    };
+    let floats = BTreeSet::from([AircraftCharacteristic::Floats]);
+    assert_eq!(implied(AirframeKind::SeaPlane), floats);
+    assert_eq!(implied(AirframeKind::Amphibian), floats);
+    for airframe in [
+        AirframeKind::LandPlane,
+        AirframeKind::Helicopter,
+        AirframeKind::Gyrocopter,
+        AirframeKind::TiltRotor,
+        AirframeKind::Glider,
+        AirframeKind::Airship,
+    ] {
+        assert_eq!(implied(airframe), BTreeSet::new(), "{airframe:?}");
+    }
 }

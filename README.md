@@ -32,15 +32,17 @@ What it holds, in two modules:
   instrument time, approaches, take-offs and landings); an authority's own
   information on it or on an assessment, which holds the answers to the
   authority's questions, each under its question's key, and their version
-  under the key `_version`, which is reserved: no question may use it; and the
+  under the key `_version`, which is reserved: no question may use it; the
   neutral description of an aircraft type that an authority classifies, which
   is
   [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,
-  re-exported.
+  re-exported; and the characteristics of an aircraft's airframe that the
+  description does not give (tailwheel undercarriage, floats and the like),
+  each cited to the rules that use it.
 - **`authority`**: the trait an authority implements, one implementation
   built once (one object) for each authority it serves (whether an entry
-  counts under its rules, what an aircraft type counts as, its requirements
-  and their currency, the questions it asks about an entry or an assessment
+  counts under its rules, what an aircraft counts as and what it requires,
+  its requirements and their currency, its own totals, the questions it asks about an entry or an assessment
   and the problems with its answers); the machinery its currency checks are
   written over; and the description of those questions, as data for the host
   to show.

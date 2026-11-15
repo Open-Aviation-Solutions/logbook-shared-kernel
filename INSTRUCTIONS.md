@@ -20,11 +20,18 @@ wants the records without the interface):
   (which `Questions` reads to decide which questions apply), and the questions'
   version under the reserved key `_version`
   (`AuthoritySpecificInformation::VERSION_KEY`), which no question may use;
-  and the neutral description of an aircraft type.
+  the neutral description of an aircraft type; and the characteristics of
+  an aircraft's airframe (`AircraftCharacteristic`): the physical facts some
+  authority's rules turn on that the description does not give, each cited
+  to the rules that use it. A fact the description gives stays in the
+  description, and a characteristic is added only when an authority needs
+  it.
 - **`authority`**: the trait an authority implements to supply its rules,
-  one object for each authority (`LicensingAuthority::id`); the
-  accumulator and check traits, the event window and `CurrencyResult`, so
-  each authority writes its currency checks over the same machinery; and the
+  one object for each authority (`LicensingAuthority::id`); the ids an
+  authority gives its terms (`TermId`), shared by its classification of an
+  aircraft and its totals, so that the host matches on an id and never on a
+  name; the accumulator and check traits, the event window and
+  `CurrencyResult`, so each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on
   a user interface.
