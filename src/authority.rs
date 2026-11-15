@@ -21,7 +21,7 @@ pub mod window;
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::FlightDuration;
+use icao_shared_kernel::{FlightDuration, Licence, MinimumAges};
 use time::Date;
 
 use crate::entry::{
@@ -84,15 +84,26 @@ pub trait LicensingAuthority {
     /// share a term id.
     fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
 
-    /// The problems with the titles held under one licence of this
-    /// authority's, for a holder born on `date_of_birth`: [`licence_title_problems`]
-    /// over [`licence_titles`](LicensingAuthority::licence_titles).
+    /// The minimum age at which each Annex 1 title is first issued, under
+    /// these rules: required, so an authority states its ages even where they
+    /// are Annex 1's ([`MinimumAges::default`]). A host builds the
+    /// [`Pilot`](icao_shared_kernel::Pilot) with
+    /// `Pilot::with_minimum_ages(…, &authority.minimum_ages())`, which checks
+    /// the Annex 1 titles' ages and repeats. The own titles' ages are in
+    /// [`licence_titles`](LicensingAuthority::licence_titles).
+    fn minimum_ages(&self) -> MinimumAges;
+
+    /// The problems with the titles under one licence of this authority's, for
+    /// a holder born on `date_of_birth`, `own` being the authority's own titles
+    /// held under it: [`licence_title_problems`] over
+    /// [`licence_titles`](LicensingAuthority::licence_titles).
     fn licence_title_problems(
         &self,
-        held: &[HeldLicenceTitle],
+        licence: &Licence,
+        own: &[HeldLicenceTitle],
         date_of_birth: Date,
     ) -> Vec<LicenceTitleProblem> {
-        licence_title_problems(&self.licence_titles(), held, date_of_birth)
+        licence_title_problems(&self.licence_titles(), licence, own, date_of_birth)
     }
 
     /// The requirements these rules check.

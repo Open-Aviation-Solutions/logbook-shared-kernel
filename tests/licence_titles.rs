@@ -4,7 +4,9 @@
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::{LicenceTitle, PrivateOrCommercialCategory};
+use icao_shared_kernel::{
+    IssuedTitle, IssuingState, Licence, LicenceTitle, MinimumAges, PrivateOrCommercialCategory,
+};
 use logbook_shared_kernel::{
     AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, HeldLicenceTitle, LicenceTitleId,
@@ -63,6 +65,10 @@ impl LicensingAuthority for Example {
         ]
     }
 
+    fn minimum_ages(&self) -> MinimumAges {
+        MinimumAges::default()
+    }
+
     fn requirements(&self) -> Vec<Requirement> {
         Vec::new()
     }
@@ -94,12 +100,24 @@ fn authority() -> Box<dyn LicensingAuthority> {
     })
 }
 
-fn own() -> LicenceTitleId {
-    LicenceTitleId::National(TermId::new("own"))
+fn own() -> TermId {
+    TermId::new("own")
 }
 
-fn held(title: LicenceTitleId, on: Date) -> HeldLicenceTitle {
+fn held(title: TermId, on: Date) -> HeldLicenceTitle {
     HeldLicenceTitle::new(title, on)
+}
+
+fn licence(titles: Vec<IssuedTitle>) -> Licence {
+    Licence::new(IssuingState::parse("XX").unwrap(), "TEST", "1", titles).unwrap()
+}
+
+fn problems(
+    titles: Vec<IssuedTitle>,
+    own: &[HeldLicenceTitle],
+    born: Date,
+) -> Vec<LicenceTitleProblem> {
+    authority().licence_title_problems(&licence(titles), own, born)
 }
 
 #[test]
@@ -107,12 +125,17 @@ fn a_title_is_identified_by_annex_1s_title_or_the_authoritys_own_term() {
     let titles = authority().licence_titles();
     assert_eq!(titles[0].id(), LicenceTitleId::Annex1(private()));
     assert_eq!(titles[0].term().name, "private pilot licence, aeroplane");
-    assert_eq!(titles[1].id(), own());
-    assert_eq!(titles[1].term().id, TermId::new("own"));
+    assert_eq!(titles[1].id(), LicenceTitleId::National(own()));
+    assert_eq!(titles[1].term().id, own());
 }
 
 #[test]
-fn a_title_is_held_from_its_date_of_first_issue() {
+fn the_authority_states_its_ages_for_annex_1s_titles() {
+    assert_eq!(authority().minimum_ages(), MinimumAges::default());
+}
+
+#[test]
+fn an_own_title_is_held_from_its_date_of_first_issue() {
     let title = held(own(), date!(2020 - 03 - 10));
     assert!(!title.held_on(date!(2020 - 03 - 09)));
     assert!(title.held_on(date!(2020 - 03 - 10)));
@@ -121,49 +144,56 @@ fn a_title_is_held_from_its_date_of_first_issue() {
 
 #[test]
 fn titles_the_authority_issues_held_once_and_old_enough_break_no_rule() {
-    let problems = authority().licence_title_problems(
-        &[
-            held(LicenceTitleId::Annex1(private()), date!(2020 - 01 - 01)),
-            held(own(), date!(2020 - 01 - 01)),
-        ],
-        date!(2000 - 01 - 01),
+    let annex1 = IssuedTitle::new(private(), date!(2020 - 01 - 01));
+    assert_eq!(
+        problems(
+            vec![annex1],
+            &[held(own(), date!(2020 - 01 - 01))],
+            date!(2000 - 01 - 01)
+        ),
+        []
     );
-    assert_eq!(problems, []);
 }
 
 #[test]
 fn an_annex_1_title_the_authority_leaves_out_is_not_issued() {
-    let glider = LicenceTitleId::Annex1(LicenceTitle::Glider);
-    let problems = authority().licence_title_problems(
-        &[held(glider.clone(), date!(2020 - 01 - 01))],
-        date!(2000 - 01 - 01),
-    );
-    assert_eq!(problems, [LicenceTitleProblem::NotIssued(glider)]);
-}
-
-#[test]
-fn a_national_title_the_authority_does_not_list_is_not_issued() {
-    let other = LicenceTitleId::National(TermId::new("other"));
-    let problems = authority().licence_title_problems(
-        &[held(other.clone(), date!(2020 - 01 - 01))],
-        date!(2000 - 01 - 01),
-    );
-    assert_eq!(problems, [LicenceTitleProblem::NotIssued(other)]);
-}
-
-#[test]
-fn a_title_listed_more_than_once_is_reported_once_and_each_listing_is_aged() {
-    // Born 2004-06-15: 16 on 2020-06-15.
-    let problems = authority().licence_title_problems(
-        &[
-            held(own(), date!(2021 - 01 - 01)),
-            held(own(), date!(2019 - 01 - 01)),
-            held(own(), date!(2022 - 01 - 01)),
-        ],
-        date!(2004 - 06 - 15),
-    );
+    let glider = IssuedTitle::new(LicenceTitle::Glider, date!(2020 - 01 - 01));
     assert_eq!(
-        problems,
+        problems(vec![glider], &[], date!(2000 - 01 - 01)),
+        [LicenceTitleProblem::NotIssued(LicenceTitleId::Annex1(
+            LicenceTitle::Glider
+        ))]
+    );
+}
+
+#[test]
+fn an_own_title_the_authority_does_not_list_is_not_issued() {
+    let other = TermId::new("other");
+    assert_eq!(
+        problems(
+            vec![],
+            &[held(other.clone(), date!(2020 - 01 - 01))],
+            date!(2000 - 01 - 01)
+        ),
+        [LicenceTitleProblem::NotIssued(LicenceTitleId::National(
+            other
+        ))]
+    );
+}
+
+#[test]
+fn an_own_title_listed_more_than_once_is_reported_once_and_each_listing_is_aged() {
+    // Born 2004-06-15: 16 on 2020-06-15.
+    assert_eq!(
+        problems(
+            vec![],
+            &[
+                held(own(), date!(2021 - 01 - 01)),
+                held(own(), date!(2019 - 01 - 01)),
+                held(own(), date!(2022 - 01 - 01)),
+            ],
+            date!(2004 - 06 - 15)
+        ),
         [
             LicenceTitleProblem::Repeated(own()),
             LicenceTitleProblem::BeforeMinimumAge {
@@ -176,16 +206,15 @@ fn a_title_listed_more_than_once_is_reported_once_and_each_listing_is_aged() {
 }
 
 #[test]
-fn a_national_title_first_issued_before_the_minimum_age_is_reported() {
+fn an_own_title_first_issued_before_the_minimum_age_is_reported() {
     // Born 2004-06-15: 16 on 2020-06-15.
     let born = date!(2004 - 06 - 15);
-    let authority = authority();
     assert_eq!(
-        authority.licence_title_problems(&[held(own(), date!(2020 - 06 - 15))], born),
+        problems(vec![], &[held(own(), date!(2020 - 06 - 15))], born),
         []
     );
     assert_eq!(
-        authority.licence_title_problems(&[held(own(), date!(2020 - 06 - 14))], born),
+        problems(vec![], &[held(own(), date!(2020 - 06 - 14))], born),
         [LicenceTitleProblem::BeforeMinimumAge {
             title: own(),
             date_of_first_issue: date!(2020 - 06 - 14),
@@ -198,11 +227,10 @@ fn a_national_title_first_issued_before_the_minimum_age_is_reported() {
 fn a_year_is_complete_on_1_march_for_one_born_on_29_february() {
     // Born 2004-02-29: 17 on 2021-03-01, not on 2021-02-28.
     let born = date!(2004 - 02 - 29);
-    let older = LicenceTitleId::National(TermId::new("older"));
-    let authority = authority();
-    let problems = |on| authority.licence_title_problems(&[held(older.clone(), on)], born);
-    assert_eq!(problems(date!(2021 - 02 - 28)).len(), 1);
-    assert_eq!(problems(date!(2021 - 03 - 01)), []);
+    let older = TermId::new("older");
+    let check = |on| problems(vec![], &[held(older.clone(), on)], born);
+    assert_eq!(check(date!(2021 - 02 - 28)).len(), 1);
+    assert_eq!(check(date!(2021 - 03 - 01)), []);
     // Before the birth the holder is not yet any age.
-    assert_eq!(problems(date!(2003 - 01 - 01)).len(), 1);
+    assert_eq!(check(date!(2003 - 01 - 01)).len(), 1);
 }

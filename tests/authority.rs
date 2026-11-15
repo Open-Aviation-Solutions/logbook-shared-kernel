@@ -8,7 +8,7 @@ use std::cell::Cell;
 use std::collections::BTreeSet;
 
 use common::{flight, session};
-use icao_shared_kernel::Capacity;
+use icao_shared_kernel::{Capacity, MinimumAges};
 use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
@@ -44,6 +44,10 @@ impl LicensingAuthority for FlightsOnly {
 
     fn licence_titles(&self) -> Vec<LicenceTitleTerm> {
         Vec::new()
+    }
+
+    fn minimum_ages(&self) -> MinimumAges {
+        MinimumAges::default()
     }
 
     fn requirements(&self) -> Vec<Requirement> {

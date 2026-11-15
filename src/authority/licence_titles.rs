@@ -12,7 +12,7 @@
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::LicenceTitle;
+use icao_shared_kernel::{Licence, LicenceTitle};
 use time::Date;
 
 use super::{Term, TermId};
@@ -22,8 +22,10 @@ use super::{Term, TermId};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LicenceTitleTerm {
     /// One of Annex 1's, with the authority's own term for it. Its minimum
-    /// age is checked by icao-shared-kernel's `Pilot`, with the State's ages
-    /// where they differ from Annex 1's (`MinimumAges`), not here.
+    /// age is the authority's [`minimum_ages`], checked by icao-shared-kernel's
+    /// `Pilot`, not here.
+    ///
+    /// [`minimum_ages`]: super::LicensingAuthority::minimum_ages
     Annex1 { title: LicenceTitle, term: Term },
     /// One of the authority's own, which Annex 1 has no title for.
     National {
@@ -43,14 +45,6 @@ impl LicenceTitleTerm {
         }
     }
 
-    fn matches(&self, id: &LicenceTitleId) -> bool {
-        match (self, id) {
-            (Self::Annex1 { title, .. }, LicenceTitleId::Annex1(other)) => title == other,
-            (Self::National { term, .. }, LicenceTitleId::National(other)) => &term.id == other,
-            _ => false,
-        }
-    }
-
     /// The authority's term for the title, whichever kind it is.
     pub fn term(&self) -> &Term {
         match self {
@@ -67,19 +61,24 @@ pub enum LicenceTitleId {
     National(TermId),
 }
 
-/// A title held under a licence, from the date the holder was first issued
-/// it: the date of first issue, not of the latest document, so a reissued
-/// document does not move it.
+/// One of the authority's own titles held under a licence, from the date the
+/// holder was first issued it: the date of first issue, not of the latest
+/// document, so a reissued document does not move it.
+///
+/// Only the authority's own titles are held here. A held Annex 1 title is
+/// icao-shared-kernel's `IssuedTitle` in the `Licence`'s titles, and "held on
+/// a date" for it is `IssuedTitle::date_of_first_issue` on or before the date,
+/// as [`held_on`](HeldLicenceTitle::held_on) is for an own title.
 ///
 /// There is no expiry or suspension to record yet.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeldLicenceTitle {
-    pub title: LicenceTitleId,
+    pub title: TermId,
     pub date_of_first_issue: Date,
 }
 
 impl HeldLicenceTitle {
-    pub fn new(title: LicenceTitleId, date_of_first_issue: Date) -> Self {
+    pub fn new(title: TermId, date_of_first_issue: Date) -> Self {
         Self {
             title,
             date_of_first_issue,
@@ -92,34 +91,37 @@ impl HeldLicenceTitle {
     }
 }
 
-/// A rule the titles held under a licence break, for any authority.
+/// A rule the titles under a licence break, for any authority.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LicenceTitleProblem {
-    /// The authority issues no such title.
+    /// The authority issues no such title: an Annex 1 title on the licence, or
+    /// one of the own titles held.
     NotIssued(LicenceTitleId),
-    /// The title is listed more than once under the licence, so it carries
-    /// more than one date of first issue.
-    Repeated(LicenceTitleId),
-    /// The holder had not reached the title's minimum age on its date of
-    /// first issue. Only the authority's own titles are checked here: an
-    /// Annex 1 title's age is checked by icao-shared-kernel's `Pilot`, with
-    /// the State's ages where they differ from Annex 1's.
+    /// An own title is listed more than once, so it carries more than one date
+    /// of first issue.
+    Repeated(TermId),
+    /// The holder had not reached an own title's minimum age on its date of
+    /// first issue.
     BeforeMinimumAge {
-        title: LicenceTitleId,
+        title: TermId,
         date_of_first_issue: Date,
         minimum_age: u8,
     },
 }
 
-/// The problems with `held`, the titles listed under one licence, against the
-/// titles its authority issues, for a holder born on `date_of_birth`, in the
-/// order the titles are listed. [`LicensingAuthority::licence_title_problems`]
-/// is this over the authority's own titles.
+/// The problems with the titles under one licence, against the titles its
+/// authority issues, for a holder born on `date_of_birth`: the Annex 1 titles
+/// on `licence` the authority does not issue, then, for `own`, the authority's
+/// own titles held, in the order they are listed, those it does not issue, one
+/// listed more than once (reported once), and one first issued before its
+/// minimum age (each listing is checked).
+/// [`LicensingAuthority::licence_title_problems`] is this over the
+/// authority's own titles.
 ///
-/// Only the authority's own titles' ages are checked here, so this is not the
-/// whole age check: an Annex 1 title's is icao-shared-kernel's `Pilot`'s, with
-/// the State's ages where they differ from Annex 1's. A title listed more
-/// than once is reported as repeated once, and each listing's age is checked.
+/// Not the whole age check: an Annex 1 title's age is checked by
+/// icao-shared-kernel's `Pilot`, built with the authority's
+/// [`minimum_ages`](super::LicensingAuthority::minimum_ages), and so are
+/// repeats among the licence's Annex 1 titles.
 ///
 /// A year is complete on the birthday, compared by month and day: someone born
 /// on 29 February completes a year on 1 March in a year that is not a leap
@@ -130,26 +132,45 @@ pub enum LicenceTitleProblem {
 /// [`LicensingAuthority::licence_title_problems`]: super::LicensingAuthority::licence_title_problems
 pub fn licence_title_problems(
     issued: &[LicenceTitleTerm],
-    held: &[HeldLicenceTitle],
+    licence: &Licence,
+    own: &[HeldLicenceTitle],
     date_of_birth: Date,
 ) -> Vec<LicenceTitleProblem> {
-    let mut seen = BTreeSet::new();
-    let mut reported = BTreeSet::new();
     let mut problems = Vec::new();
-    for title in held {
-        let first = seen.insert(&title.title);
-        if !first && reported.insert(&title.title) {
-            problems.push(LicenceTitleProblem::Repeated(title.title.clone()));
+    for held in licence.titles() {
+        let issues = issued.iter().any(
+            |term| matches!(term, LicenceTitleTerm::Annex1 { title, .. } if *title == held.title),
+        );
+        if !issues {
+            problems.push(LicenceTitleProblem::NotIssued(LicenceTitleId::Annex1(
+                held.title,
+            )));
         }
-        match issued.iter().find(|term| term.matches(&title.title)) {
-            None if first => problems.push(LicenceTitleProblem::NotIssued(title.title.clone())),
-            Some(LicenceTitleTerm::National { minimum_age, .. })
-                if age_on(date_of_birth, title.date_of_first_issue) < i32::from(*minimum_age) =>
+    }
+    let mut seen = BTreeSet::new();
+    let mut repeated = BTreeSet::new();
+    for held in own {
+        let first = seen.insert(&held.title);
+        if !first && repeated.insert(&held.title) {
+            problems.push(LicenceTitleProblem::Repeated(held.title.clone()));
+        }
+        let term = issued.iter().find_map(|term| match term {
+            LicenceTitleTerm::National { term, minimum_age } if term.id == held.title => {
+                Some(*minimum_age)
+            }
+            _ => None,
+        });
+        match term {
+            None if first => problems.push(LicenceTitleProblem::NotIssued(
+                LicenceTitleId::National(held.title.clone()),
+            )),
+            Some(minimum_age)
+                if age_on(date_of_birth, held.date_of_first_issue) < i32::from(minimum_age) =>
             {
                 problems.push(LicenceTitleProblem::BeforeMinimumAge {
-                    title: title.title.clone(),
-                    date_of_first_issue: title.date_of_first_issue,
-                    minimum_age: *minimum_age,
+                    title: held.title.clone(),
+                    date_of_first_issue: held.date_of_first_issue,
+                    minimum_age,
                 });
             }
             _ => {}

@@ -31,9 +31,11 @@ wants the records without the interface):
   authority gives its terms (`TermId`), shared by its classification of an
   aircraft and its totals, so that the host matches on an id and never on a
   name; the titles of licence it issues (`LicenceTitleTerm`: Annex 1's under
-  its own term, or its own with a minimum age), the titles held under a
-  licence (`HeldLicenceTitle`) and the rules over them that hold for any
-  authority (`licence_title_problems`); the accumulator and check traits, the event window and
+  its own term, or its own with a minimum age), the minimum ages it sets for Annex 1's
+  (`minimum_ages`), the own titles held under a licence
+  (`HeldLicenceTitle`; Annex 1's are the kernel's `Licence::titles`) and the
+  rules over a licence's titles that hold for any authority
+  (`licence_title_problems`); the accumulator and check traits, the event window and
   `CurrencyResult`, so each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on
