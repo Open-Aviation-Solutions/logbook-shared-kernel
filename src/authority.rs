@@ -62,6 +62,9 @@ pub trait LicensingAuthority {
     /// A characteristic that the aircraft's category does not use (skis on
     /// a helicopter, say) is not a problem: it is a physical fact, and the
     /// rules simply require nothing for it.
+    ///
+    /// A session carries no characteristics, so a session's simulated type
+    /// is classified with an empty set.
     fn classify(
         &self,
         aircraft: &AircraftDescription,

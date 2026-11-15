@@ -67,9 +67,7 @@ pub enum Subject {
         /// The description of its type, as the host found it; `None` when
         /// it found none.
         description: Option<AircraftDescription>,
-        /// Its airframe's characteristics, as the host found them: those
-        /// recorded for the aircraft, or else those its description implies
-        /// ([`AircraftCharacteristic::implied_by`]).
+        /// Its airframe's characteristics, as recorded for the aircraft.
         characteristics: BTreeSet<AircraftCharacteristic>,
         /// Whether the pilot was "the sole occupant of an aircraft" (Annex 1,
         /// "solo flight time"). Required: a flight has an answer.

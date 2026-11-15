@@ -21,11 +21,11 @@ wants the records without the interface):
   version under the reserved key `_version`
   (`AuthoritySpecificInformation::VERSION_KEY`), which no question may use;
   the neutral description of an aircraft type; and the characteristics of
-  an aircraft's airframe (`AircraftCharacteristic`): the physical facts some
-  authority's rules turn on that the description does not give, each cited
-  to the rules that use it. A fact the description gives stays in the
-  description, and a characteristic is added only when an authority needs
-  it.
+  an aircraft's airframe (`AircraftCharacteristic`): the physical facts that
+  any authority's rules may use and that the description does not give, as
+  recorded for the aircraft (nothing implies them). A fact the description
+  gives stays in the description, and a characteristic is added only when
+  an authority needs it.
 - **`authority`**: the trait an authority implements to supply its rules,
   one object for each authority (`LicensingAuthority::id`); the ids an
   authority gives its terms (`TermId`), shared by its classification of an
@@ -48,6 +48,15 @@ reserved key the version of an authority's information is stored under,
 which is this crate's, as
 [#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
 settled), and any user interface.
+
+The aircraft's characteristics are not one State's rules, even where only
+one State's rules use a characteristic so far. The kernel records the
+physical characteristics of an airframe that any authority may use, each
+named in the words of a regulation that uses it and citing the rules that
+do; what an authority requires for them is the authority's own, given
+through `classify`. So a characteristic only CASA's rules use yet (ski
+landing gear, say) is in scope, and CASA's design feature endorsement for it
+is not.
 
 ## Conventions
 
