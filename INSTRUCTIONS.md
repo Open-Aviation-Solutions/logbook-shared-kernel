@@ -23,7 +23,9 @@ wants the records without the interface):
   the neutral description of an aircraft type; and the characteristics of
   an aircraft's airframe (`AircraftCharacteristic`): the physical facts that
   any authority's rules may use and that the description does not give, as
-  recorded for the aircraft (nothing implies them). A fact the description
+  recorded for the aircraft, or for a session of a device (`Simulated`: the
+  configuration the device represented, kept as the session's own copy, not
+  linked to an aircraft); nothing implies them. A fact the description
   gives stays in the description, and a characteristic is added only when
   an authority needs it.
 - **`authority`**: the trait an authority implements to supply its rules,
@@ -106,9 +108,8 @@ range, for the same reason consumers take this crate by one (below). Before
 starting work, check whether either has a newer release (`cargo search
 icao-shared-kernel --limit 1`, and the same for aircraft-type-descriptions). A
 newer patch is taken up with `cargo update -p <crate>` in the same pull
-request. A newer minor version is breaking, and is moved to first, in a pull
-request of its own, before the work; it then needs a minor release of this
-crate, as below.
+request. A newer minor version is breaking, and is taken up in the same pull
+request too, which bumps this crate's minor version with it (below).
 When moving to a new kernel minor, check its new exports for rules this crate
 copies, and for names that clash with this crate's re-exports.
 

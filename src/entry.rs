@@ -78,11 +78,31 @@ pub enum Subject {
         session: Uuid,
         /// The kernel's `FlightSimulationTrainingDevice`.
         device: Uuid,
-        /// The type of aircraft the device represented, if recorded, and the
-        /// description of that type as the host found it (`None` when it
-        /// found none). A description is of a recorded type only.
-        simulated: Option<(AircraftType, Option<AircraftDescription>)>,
+        /// The aircraft the device represented, if recorded.
+        simulated: Option<Simulated>,
     },
+}
+
+/// What a flight simulation training device represented in a session: a type
+/// and its configuration, not a registered aircraft. A description and
+/// characteristics are of a recorded type only, which is why they sit with
+/// it.
+///
+/// The characteristics belong to the session: a host may pre-fill them (from
+/// an aircraft record, or the device's usual configuration), but the session
+/// keeps its own copy, so a later change to an aircraft's record does not
+/// reclassify a past session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Simulated {
+    /// The type designator of the aircraft represented.
+    pub aircraft_type: AircraftType,
+    /// The description of that type as the host found it; `None` when it
+    /// found none.
+    pub description: Option<AircraftDescription>,
+    /// The characteristics of the configuration the device represented, as
+    /// recorded for the session. They say what the session represented, not
+    /// how much of its time counts, which the device's approval answers.
+    pub characteristics: BTreeSet<AircraftCharacteristic>,
 }
 
 impl Subject {

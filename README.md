@@ -36,8 +36,8 @@ What it holds, in two modules:
   neutral description of an aircraft type that an authority classifies, which
   is
   [aircraft-type-descriptions](https://github.com/Open-Aviation-Solutions/aircraft-type-descriptions)'s,
-  re-exported; and the characteristics recorded for an aircraft's airframe
-  that the description does not give (tailwheel undercarriage, float
+  re-exported; and the characteristics recorded for an aircraft's airframe,
+  or for a session of a device, as its own copy (`Simulated`), that the description does not give (tailwheel undercarriage, float
   alighting gear and the like), each cited to the rules that use it.
 - **`authority`**: the trait an authority implements, one implementation
   built once (one object) for each authority it serves (whether an entry

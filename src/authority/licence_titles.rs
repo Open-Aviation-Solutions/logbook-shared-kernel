@@ -12,7 +12,7 @@
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::{Licence, LicenceTitle};
+use icao_shared_kernel::{age_on, Licence, LicenceTitle};
 use time::Date;
 
 use super::{Term, TermId};
@@ -125,9 +125,7 @@ pub enum LicenceTitleProblem {
 /// [`minimum_ages`](super::LicensingAuthority::minimum_ages), and
 /// `Licence::new` refuses an Annex 1 title listed twice.
 ///
-/// A year is complete on the birthday, compared by month and day: someone born
-/// on 29 February completes a year on 1 March in a year that is not a leap
-/// year. The age is checked on the date of first issue, so it can miss an
+/// Age is counted as [`icao_shared_kernel::age_on`] counts it. The age is checked on the date of first issue, so it can miss an
 /// applicant who was too young when they applied, though not one who was too
 /// young when the title was issued.
 ///
@@ -179,16 +177,4 @@ pub fn licence_title_problems(
         }
     }
     problems
-}
-
-/// Whole years completed on `on` by someone born on `born`; negative before
-/// the birth. A copy of icao-shared-kernel's, which does not export it yet
-/// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
-fn age_on(born: Date, on: Date) -> i32 {
-    let years = on.year() - born.year();
-    if (u8::from(on.month()), on.day()) < (u8::from(born.month()), born.day()) {
-        years - 1
-    } else {
-        years
-    }
 }

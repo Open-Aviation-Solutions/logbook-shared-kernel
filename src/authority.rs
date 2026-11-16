@@ -67,8 +67,8 @@ pub trait LicensingAuthority {
     /// a helicopter, say) is not a problem: it is a physical fact, and the
     /// rules simply require nothing for it.
     ///
-    /// A session carries no characteristics, so a session's simulated type
-    /// is classified with an empty set.
+    /// A session's simulated type is classified with the characteristics
+    /// recorded for the session ([`Simulated::characteristics`](crate::entry::Simulated::characteristics)).
     fn classify(
         &self,
         aircraft: &AircraftDescription,
@@ -88,15 +88,12 @@ pub trait LicensingAuthority {
     /// these rules: required, so an authority states its ages even where they
     /// are Annex 1's ([`MinimumAges::default`]). A host builds the
     /// [`Pilot`](icao_shared_kernel::Pilot) with
-    /// `Pilot::with_minimum_ages(…, &authority.minimum_ages())`, which checks
-    /// the Annex 1 titles' ages (`Licence::new` refuses a title listed twice).
-    /// The own titles' ages are in
-    /// [`licence_titles`](LicensingAuthority::licence_titles).
-    ///
-    /// `Pilot::with_minimum_ages` applies one table to every licence, so a
-    /// pilot holding licences from authorities whose ages differ cannot yet
-    /// have each checked against its own authority's
-    /// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
+    /// `Pilot::with_minimum_ages` (or `Pilot::deserialize_with`), giving it a
+    /// function from each licence's issuing State and authority to that
+    /// authority's `minimum_ages()`; the ages of each licence are then
+    /// checked against its own authority's. That checks the Annex 1 titles'
+    /// ages (`Licence::new` refuses a title listed twice). The own titles'
+    /// ages are in [`licence_titles`](LicensingAuthority::licence_titles).
     fn minimum_ages(&self) -> MinimumAges;
 
     /// The problems with the titles under one licence of this authority's, for
