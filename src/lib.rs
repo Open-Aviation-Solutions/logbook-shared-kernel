@@ -33,5 +33,5 @@ pub use authority::{
 pub use entry::{
     AircraftCharacteristic, AircraftDescription, Approach, ApproachType, Assessment, AssessmentId,
     AuthorityId, AuthoritySpecificInformation, DayNight, Entry, EntryError, EntryId, EntryParts,
-    InstrumentTime, Logbook, Record, RnpApchMinima, Route, Subject, SubjectId,
+    InstrumentTime, Logbook, Record, RnpApchMinima, Route, Simulated, Subject, SubjectId,
 };

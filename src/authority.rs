@@ -67,8 +67,8 @@ pub trait LicensingAuthority {
     /// a helicopter, say) is not a problem: it is a physical fact, and the
     /// rules simply require nothing for it.
     ///
-    /// A session carries no characteristics, so a session's simulated type
-    /// is classified with an empty set.
+    /// A session's simulated type is classified with the characteristics
+    /// recorded for the session ([`Simulated::characteristics`]).
     fn classify(
         &self,
         aircraft: &AircraftDescription,

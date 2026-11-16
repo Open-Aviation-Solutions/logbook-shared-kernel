@@ -167,7 +167,8 @@ pub fn licence_title_problems(
                 LicenceTitleId::National(held.title.clone()),
             )),
             Some(minimum_age)
-                if age_on(date_of_birth, held.date_of_first_issue) < i32::from(minimum_age) =>
+                if icao_shared_kernel::age_on(date_of_birth, held.date_of_first_issue)
+                    < i32::from(minimum_age) =>
             {
                 problems.push(LicenceTitleProblem::BeforeMinimumAge {
                     title: held.title.clone(),
@@ -179,16 +180,4 @@ pub fn licence_title_problems(
         }
     }
     problems
-}
-
-/// Whole years completed on `on` by someone born on `born`; negative before
-/// the birth. A copy of icao-shared-kernel's, which does not export it yet
-/// ([icao-shared-kernel#39](https://github.com/Open-Aviation-Solutions/icao-shared-kernel/issues/39)).
-fn age_on(born: Date, on: Date) -> i32 {
-    let years = on.year() - born.year();
-    if (u8::from(on.month()), on.day()) < (u8::from(born.month()), born.day()) {
-        years - 1
-    } else {
-        years
-    }
 }

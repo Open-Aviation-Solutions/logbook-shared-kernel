@@ -23,7 +23,9 @@ wants the records without the interface):
   the neutral description of an aircraft type; and the characteristics of
   an aircraft's airframe (`AircraftCharacteristic`): the physical facts that
   any authority's rules may use and that the description does not give, as
-  recorded for the aircraft (nothing implies them). A fact the description
+  recorded for the aircraft, or for a session of a device (`Simulated`: the
+  configuration the device represented, kept as the session's own copy, not
+  linked to an aircraft); nothing implies them. A fact the description
   gives stays in the description, and a characteristic is added only when
   an authority needs it.
 - **`authority`**: the trait an authority implements to supply its rules,
