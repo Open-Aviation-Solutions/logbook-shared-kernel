@@ -12,7 +12,7 @@
 
 use std::collections::BTreeSet;
 
-use icao_shared_kernel::{Licence, LicenceTitle};
+use icao_shared_kernel::{age_on, Licence, LicenceTitle};
 use time::Date;
 
 use super::{Term, TermId};
@@ -125,9 +125,7 @@ pub enum LicenceTitleProblem {
 /// [`minimum_ages`](super::LicensingAuthority::minimum_ages), and
 /// `Licence::new` refuses an Annex 1 title listed twice.
 ///
-/// A year is complete on the birthday, compared by month and day: someone born
-/// on 29 February completes a year on 1 March in a year that is not a leap
-/// year. The age is checked on the date of first issue, so it can miss an
+/// Age is counted as [`icao_shared_kernel::age_on`] counts it. The age is checked on the date of first issue, so it can miss an
 /// applicant who was too young when they applied, though not one who was too
 /// young when the title was issued.
 ///
@@ -167,8 +165,7 @@ pub fn licence_title_problems(
                 LicenceTitleId::National(held.title.clone()),
             )),
             Some(minimum_age)
-                if icao_shared_kernel::age_on(date_of_birth, held.date_of_first_issue)
-                    < i32::from(minimum_age) =>
+                if age_on(date_of_birth, held.date_of_first_issue) < i32::from(minimum_age) =>
             {
                 problems.push(LicenceTitleProblem::BeforeMinimumAge {
                     title: held.title.clone(),

@@ -103,16 +103,21 @@ fn a_capacity_needing_another_pilot_is_accepted_with_one_on_board() {
 }
 
 #[test]
-fn a_session_with_a_type_and_a_description_a_type_alone_or_neither_is_accepted() {
+fn a_session_with_a_type_with_or_without_a_description_or_characteristics_or_neither_is_accepted() {
     let c172 = || AircraftType::parse("C172").unwrap();
-    let simulated = |description| {
+    let simulated = |description, characteristics| {
         Some(Simulated {
             aircraft_type: c172(),
             description,
-            characteristics: BTreeSet::from([AircraftCharacteristic::TailwheelUndercarriage]),
+            characteristics,
         })
     };
-    for simulated in [simulated(Some(description())), simulated(None), None] {
+    let tailwheel = BTreeSet::from([AircraftCharacteristic::TailwheelUndercarriage]);
+    for simulated in [
+        simulated(Some(description()), tailwheel),
+        simulated(None, BTreeSet::new()),
+        None,
+    ] {
         let subject = Subject::Session {
             session: Uuid::nil(),
             device: Uuid::nil(),

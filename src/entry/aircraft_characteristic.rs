@@ -14,7 +14,9 @@
 /// added only when an authority needs it.
 ///
 /// Nothing implies them: an aircraft has the characteristics recorded for
-/// it. Its type's description cannot tell them apart (a seaplane's float
+/// it, or, for a session, the characteristics recorded for the configuration
+/// its device represented (`Simulated`), a copy of its own and not linked to an
+/// aircraft. Its type's description cannot tell them apart (a seaplane's float
 /// alighting gear from a floating hull, say).
 ///
 /// [`LicensingAuthority::classify`]: crate::authority::LicensingAuthority::classify
