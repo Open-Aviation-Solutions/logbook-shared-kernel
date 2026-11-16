@@ -108,9 +108,8 @@ range, for the same reason consumers take this crate by one (below). Before
 starting work, check whether either has a newer release (`cargo search
 icao-shared-kernel --limit 1`, and the same for aircraft-type-descriptions). A
 newer patch is taken up with `cargo update -p <crate>` in the same pull
-request. A newer minor version is breaking, and is moved to first, in a pull
-request of its own, before the work; it then needs a minor release of this
-crate, as below.
+request. A newer minor version is breaking, and is taken up in the same pull
+request too, which bumps this crate's minor version with it (below).
 When moving to a new kernel minor, check its new exports for rules this crate
 copies, and for names that clash with this crate's re-exports.
 
