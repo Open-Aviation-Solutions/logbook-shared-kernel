@@ -551,7 +551,7 @@ fn a_records_information_is_found_by_its_authority() {
 }
 
 /// Questions with one for a session, one for a flight, one for an entry with
-/// an approach, and a follow-up to the second.
+/// an approach, and a follow-up to the approach question.
 fn with_record_questions() -> Questions {
     let question = |key, applies_when| Question {
         key,
