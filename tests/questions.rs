@@ -550,8 +550,8 @@ fn a_records_information_is_found_by_its_authority() {
     }
 }
 
-/// Questions with one for a session, one for an entry with an approach,
-/// and a follow-up to the second.
+/// Questions with one for a session, one for a flight, one for an entry with
+/// an approach, and a follow-up to the approach question.
 fn with_record_questions() -> Questions {
     let question = |key, applies_when| Question {
         key,
@@ -565,6 +565,7 @@ fn with_record_questions() -> Questions {
         1,
         vec![
             question("session", Condition::Session),
+            question("flight", Condition::Flight),
             question("approach", Condition::AnyApproach),
             question(
                 "follow_up",
@@ -586,7 +587,7 @@ fn an_approach() -> Approach {
 }
 
 #[test]
-fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_approach() {
+fn a_record_condition_holds_only_for_an_entry_of_its_kind_or_that_records_an_approach() {
     let questions = with_record_questions();
     let flight = flight("e", Capacity::PilotInCommand);
     let session = session("s", Capacity::PilotInCommand);
@@ -601,9 +602,9 @@ fn a_record_condition_holds_only_for_an_entry_that_is_a_session_or_records_an_ap
             .map(|question| question.key)
             .collect()
     };
-    assert!(keys(Record::Entry(&flight)).is_empty());
+    assert_eq!(keys(Record::Entry(&flight)), ["flight"]);
     assert_eq!(keys(Record::Entry(&session)), ["session"]);
-    assert_eq!(keys(Record::Entry(&approached)), ["approach"]);
+    assert_eq!(keys(Record::Entry(&approached)), ["flight", "approach"]);
     assert!(keys(Record::Assessment(&assessment)).is_empty());
 }
 

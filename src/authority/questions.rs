@@ -398,6 +398,9 @@ pub enum Condition {
     /// The record is an entry of a session in a flight simulation training
     /// device ([`Subject::Session`]). It never holds for an assessment.
     Session,
+    /// The record is an entry of a flight in an aircraft
+    /// ([`Subject::Flight`]). It never holds for an assessment.
+    Flight,
     /// The record is an entry that records at least one instrument approach
     /// ([`Entry::approaches`](crate::entry::Entry::approaches)). It never
     /// holds for an assessment.
@@ -425,6 +428,10 @@ impl Condition {
             }
             Self::Session => match record {
                 Record::Entry(entry) => matches!(entry.subject(), Subject::Session { .. }),
+                Record::Assessment(_) => false,
+            },
+            Self::Flight => match record {
+                Record::Entry(entry) => matches!(entry.subject(), Subject::Flight { .. }),
                 Record::Assessment(_) => false,
             },
             Self::AnyApproach => {
