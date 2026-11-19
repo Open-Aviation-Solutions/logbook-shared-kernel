@@ -15,6 +15,7 @@ mod accumulator;
 mod currency;
 mod event_window;
 mod licence_titles;
+mod migration;
 mod questions;
 mod totals;
 pub mod window;
@@ -35,6 +36,7 @@ pub use event_window::EventWindow;
 pub use licence_titles::{
     licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,
 };
+pub use migration::MigrationRefused;
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
 };
@@ -162,6 +164,34 @@ pub trait LicensingAuthority {
         record: Record,
         information: &AuthoritySpecificInformation,
     ) -> Vec<Problem>;
+
+    /// The authority's information on `record`, brought up to the version
+    /// these rules write, from any older version they still read: `Ok(None)`
+    /// when it is at that version already, so there is nothing to rewrite.
+    ///
+    /// The migrated information must read as current to this authority's
+    /// own [`problems_for`]: a host that rewrites a record with it finds no
+    /// problem of version. Running it on what it returned gives `Ok(None)`.
+    /// A migration changes only what it guesses nothing about; it does not
+    /// ask the pilot anything.
+    ///
+    /// Information that is not of any version these rules read, including
+    /// one older than every migration the authority keeps, is refused
+    /// ([`MigrationRefused`]), and the host says to update in steps.
+    ///
+    /// The default, `Ok(None)`, is for an authority with no format history.
+    /// An authority whose information has versions must implement this: it
+    /// may not lean on the default.
+    ///
+    /// [`problems_for`]: LicensingAuthority::problems_for
+    fn migrate_information(
+        &self,
+        record: Record,
+        information: &AuthoritySpecificInformation,
+    ) -> Result<Option<AuthoritySpecificInformation>, MigrationRefused> {
+        let _ = (record, information);
+        Ok(None)
+    }
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation

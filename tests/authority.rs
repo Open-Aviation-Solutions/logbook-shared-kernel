@@ -12,8 +12,8 @@ use icao_shared_kernel::{Capacity, MinimumAges};
 use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
-    LicenceTitleTerm, LicensingAuthority, Logbook, Measure, Problem, Questions, Record,
-    Requirement, RequirementId, Subject, Total,
+    LicenceTitleTerm, LicensingAuthority, Logbook, Measure, MigrationRefused, Problem, Questions,
+    Record, Requirement, RequirementId, Subject, Total,
 };
 use time::Date;
 
@@ -141,4 +141,21 @@ fn what_the_authority_does_not_count_reaches_no_accumulator_and_only_that() {
     );
     assert_eq!((total.total(), pic.total()), (60, 0));
     assert_eq!(authority.asked.get(), 2);
+}
+
+#[test]
+fn an_authority_with_no_format_history_has_nothing_to_migrate() {
+    let information = AuthoritySpecificInformation::new(serde_json::json!({"_version": 1}));
+    let entry = flight("e", Capacity::PilotInCommand);
+    assert_eq!(
+        authority().migrate_information(Record::Entry(&entry), &information),
+        Ok(None)
+    );
+}
+
+#[test]
+fn a_refusal_carries_a_message_to_show() {
+    let refused = MigrationRefused::new("update the app in steps");
+    assert_eq!(refused.message(), "update the app in steps");
+    assert_eq!(refused.to_string(), "update the app in steps");
 }

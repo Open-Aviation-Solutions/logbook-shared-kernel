@@ -26,8 +26,8 @@ pub use authority::{
     AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels,
     Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
     EntryAccumulator, EventWindow, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem,
-    LicenceTitleTerm, LicensingAuthority, Measure, Problem, ProblemAt, ProblemKind, Question,
-    Questions, Requirement, RequirementId, Term, TermId, Total,
+    LicenceTitleTerm, LicensingAuthority, Measure, MigrationRefused, Problem, ProblemAt,
+    ProblemKind, Question, Questions, Requirement, RequirementId, Term, TermId, Total,
 };
 
 pub use entry::{
