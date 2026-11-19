@@ -169,28 +169,48 @@ pub trait LicensingAuthority {
     /// these rules write, from any older version they still read: `Ok(None)`
     /// when it is at that version already, so there is nothing to rewrite.
     ///
-    /// The migrated information must read as current to this authority's
-    /// own [`problems_for`]: a host that rewrites a record with it finds no
-    /// problem of version. Running it on what it returned gives `Ok(None)`.
+    /// The migrated information is stamped with the current version
+    /// ([`Questions::stamp`]) and reads as current to this authority's own
+    /// [`problems_for`]. Running it on what it returned gives `Ok(None)`.
     /// A migration changes only what it guesses nothing about; it does not
     /// ask the pilot anything.
     ///
-    /// Information that is not of any version these rules read, including
-    /// one older than every migration the authority keeps, is refused
-    /// ([`MigrationRefused`]), and the host says to update in steps.
+    /// Information these rules cannot migrate is refused
+    /// ([`MigrationRefused`]), by kind, and the host's advice follows the
+    /// kind: from a newer version than these rules write ([`Newer`]), update
+    /// the app; older than every migration the authority keeps
+    /// ([`TooOld`]), update in steps; not readable as the version it claims
+    /// ([`Unreadable`]), the record is damaged and its file needs correcting.
     ///
-    /// The default, `Ok(None)`, is for an authority with no format history.
-    /// An authority whose information has versions must implement this: it
-    /// may not lean on the default.
+    /// The default is for an authority with no format history: it returns
+    /// `Ok(None)` for information at the version of
+    /// [`questions_for`](LicensingAuthority::questions_for), and refuses any
+    /// other, so an authority whose information has versions and has not
+    /// implemented this refuses its older information visibly and does not
+    /// pass it as current.
     ///
     /// [`problems_for`]: LicensingAuthority::problems_for
+    /// [`Newer`]: MigrationRefused::Newer
+    /// [`TooOld`]: MigrationRefused::TooOld
+    /// [`Unreadable`]: MigrationRefused::Unreadable
     fn migrate_information(
         &self,
         record: Record,
         information: &AuthoritySpecificInformation,
     ) -> Result<Option<AuthoritySpecificInformation>, MigrationRefused> {
-        let _ = (record, information);
-        Ok(None)
+        let current = self.questions_for(record).version();
+        match information.version() {
+            Some(version) if version == current => Ok(None),
+            Some(version) if version > current => Err(MigrationRefused::Newer(format!(
+                "the information is of version {version}, newer than version {current}, which these rules write"
+            ))),
+            Some(version) => Err(MigrationRefused::TooOld(format!(
+                "the information is of version {version}, which these rules have no migration from, to version {current}"
+            ))),
+            None => Err(MigrationRefused::Unreadable(
+                "the information is not a JSON object holding a version".into(),
+            )),
+        }
     }
 }
 

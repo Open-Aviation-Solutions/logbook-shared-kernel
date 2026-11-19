@@ -143,19 +143,47 @@ fn what_the_authority_does_not_count_reaches_no_accumulator_and_only_that() {
     assert_eq!(authority.asked.get(), 2);
 }
 
-#[test]
-fn an_authority_with_no_format_history_has_nothing_to_migrate() {
-    let information = AuthoritySpecificInformation::new(serde_json::json!({"_version": 1}));
+fn migrate(
+    value: serde_json::Value,
+) -> Result<Option<AuthoritySpecificInformation>, MigrationRefused> {
     let entry = flight("e", Capacity::PilotInCommand);
-    assert_eq!(
-        authority().migrate_information(Record::Entry(&entry), &information),
-        Ok(None)
-    );
+    authority().migrate_information(
+        Record::Entry(&entry),
+        &AuthoritySpecificInformation::new(value),
+    )
 }
 
 #[test]
-fn a_refusal_carries_a_message_to_show() {
-    let refused = MigrationRefused::new("update the app in steps");
-    assert_eq!(refused.message(), "update the app in steps");
-    assert_eq!(refused.to_string(), "update the app in steps");
+fn the_default_has_nothing_to_migrate_at_the_current_version() {
+    assert_eq!(migrate(serde_json::json!({"_version": 1})), Ok(None));
+}
+
+#[test]
+fn the_default_refuses_a_newer_version_as_newer() {
+    assert!(matches!(
+        migrate(serde_json::json!({"_version": 2})),
+        Err(MigrationRefused::Newer(_))
+    ));
+}
+
+#[test]
+fn the_default_refuses_an_older_version_as_too_old() {
+    assert!(matches!(
+        migrate(serde_json::json!({"_version": 0})),
+        Err(MigrationRefused::TooOld(_))
+    ));
+}
+
+#[test]
+fn the_default_refuses_no_version_and_a_non_object_as_unreadable() {
+    for value in [
+        serde_json::json!({}),
+        serde_json::json!("x"),
+        serde_json::Value::Null,
+    ] {
+        assert!(matches!(
+            migrate(value),
+            Err(MigrationRefused::Unreadable(_))
+        ));
+    }
 }
