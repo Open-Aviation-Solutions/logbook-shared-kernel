@@ -50,11 +50,13 @@ it, are on [#1](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel
 
 Out of scope (do not add here): any one State's rules, names or regulations
 (CASA's are au-casa's), ICAO's terms themselves (`icao-shared-kernel`'s),
-storage and stored formats (the application's; the one exception is the
+storage and stored formats (the application's; the exceptions are the
 reserved key the version of an authority's information is stored under,
 which is this crate's, as
 [#14](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/14)
-settled), and any user interface.
+settled, and the migration of an authority's information to the version
+it writes, `LicensingAuthority::migrate_information`, so the host asks every
+authority the same way), and any user interface.
 
 The aircraft's characteristics are not one State's rules, even where only
 one State's rules use a characteristic so far. The kernel records the

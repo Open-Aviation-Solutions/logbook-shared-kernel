@@ -15,6 +15,7 @@ mod accumulator;
 mod currency;
 mod event_window;
 mod licence_titles;
+mod migration;
 mod questions;
 mod totals;
 pub mod window;
@@ -35,6 +36,7 @@ pub use event_window::EventWindow;
 pub use licence_titles::{
     licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,
 };
+pub use migration::MigrationRefused;
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
 };
@@ -162,6 +164,65 @@ pub trait LicensingAuthority {
         record: Record,
         information: &AuthoritySpecificInformation,
     ) -> Vec<Problem>;
+
+    /// The authority's stored information on `record`, brought up to the
+    /// version these rules write, from any older version they still read:
+    /// `Ok(None)` when it is at that version already, so there is nothing to
+    /// rewrite. `Ok(None)` says only that: it is not a check of the answers,
+    /// which is [`problems_for`]'s.
+    ///
+    /// Only stored information is migrated. A record with no information for
+    /// this authority ([`Record::information_for`] gives `None`) has nothing
+    /// to migrate, and the host does not call this for it: its questions are
+    /// unanswered, which is [`problems_for`]'s to report. Stored information
+    /// always holds a version, as the host stamps it on saving, so stored
+    /// information without one is damaged.
+    ///
+    /// The migrated information is stamped with the current version
+    /// ([`Questions::stamp`]) and reads as current to this authority's own
+    /// [`problems_for`]. Running it on what it returned gives `Ok(None)`.
+    /// A migration changes only what it guesses nothing about.
+    ///
+    /// Information these rules cannot migrate is refused
+    /// ([`MigrationRefused`]), by kind, and the host's advice follows the
+    /// kind: from a newer version than these rules write ([`Newer`]), update
+    /// the app; older than every migration the authority keeps
+    /// ([`TooOld`]), update in steps; not readable as the version it claims
+    /// ([`Unreadable`]), including stored information with no version, the
+    /// record is damaged and its file needs correcting.
+    ///
+    /// The default is for an authority with no format history: it reads the
+    /// version only, returning `Ok(None)` for information at the version of
+    /// [`questions_for`](LicensingAuthority::questions_for) for the record's
+    /// kind, and refuses any other, so an authority whose information has versions and has not
+    /// implemented this refuses its older information visibly and does not
+    /// pass it as current.
+    ///
+    /// [`problems_for`]: LicensingAuthority::problems_for
+    /// [`Newer`]: MigrationRefused::Newer
+    /// [`TooOld`]: MigrationRefused::TooOld
+    /// [`Unreadable`]: MigrationRefused::Unreadable
+    /// [`Record::information_for`]: crate::entry::Record::information_for
+    fn migrate_information(
+        &self,
+        record: Record,
+        information: &AuthoritySpecificInformation,
+    ) -> Result<Option<AuthoritySpecificInformation>, MigrationRefused> {
+        let current = self.questions_for(record).version();
+        match information.version() {
+            Some(version) if version == current => Ok(None),
+            Some(version) if version > current => Err(MigrationRefused::Newer(format!(
+                "the information is of version {version}, newer than version {current}, which these rules write"
+            ))),
+            Some(version) => Err(MigrationRefused::TooOld(format!(
+                "the information is of version {version}, which these rules have no migration from, to version {current}"
+            ))),
+            None => Err(MigrationRefused::Unreadable(format!(
+                "the information holds no version: a JSON object with \"{}\" a whole number is expected",
+                AuthoritySpecificInformation::VERSION_KEY
+            ))),
+        }
+    }
 }
 
 /// Identifies a requirement. The authority's, and opaque: one regulation
