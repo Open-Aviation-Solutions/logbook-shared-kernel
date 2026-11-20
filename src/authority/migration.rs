@@ -9,8 +9,10 @@ use std::fmt;
 /// advises; the message, in the authority's words (the key at fault, say),
 /// is what it shows with that advice.
 ///
-/// Not exhaustive: a refusal that asks the pilot to decide something can be
-/// added without breaking a host.
+/// Not exhaustive, so that a kind of refusal with advice of its own can be
+/// added without breaking a host. A record that needs the pilot's decision
+/// is not a refusal, and is not one of these: what a migration returns for
+/// one is settled when an authority first needs it.
 ///
 /// [`LicensingAuthority::migrate_information`]: crate::authority::LicensingAuthority::migrate_information
 #[derive(Debug, Clone, PartialEq, Eq)]

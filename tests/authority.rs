@@ -7,7 +7,7 @@ mod common;
 use std::cell::Cell;
 use std::collections::BTreeSet;
 
-use common::{flight, session};
+use common::{assessment, flight, session};
 use icao_shared_kernel::{Capacity, MinimumAges};
 use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
@@ -62,8 +62,13 @@ impl LicensingAuthority for FlightsOnly {
         Vec::new()
     }
 
-    fn questions_for(&self, _: Record) -> Questions {
-        Questions::new(1, Vec::new())
+    /// An entry's questions are at version 1 and an assessment's at 3, so
+    /// a test can tell which the version was taken for.
+    fn questions_for(&self, record: Record) -> Questions {
+        match record {
+            Record::Entry(_) => Questions::new(1, Vec::new()),
+            Record::Assessment(_) => Questions::new(3, Vec::new()),
+        }
     }
 
     fn problems_for(&self, _: Record, _: &AuthoritySpecificInformation) -> Vec<Problem> {
@@ -175,9 +180,41 @@ fn the_default_refuses_an_older_version_as_too_old() {
 }
 
 #[test]
+fn the_default_reads_the_version_for_the_kind_of_record() {
+    let assessment = assessment("a");
+    let migrate_assessment = |value| {
+        authority().migrate_information(
+            Record::Assessment(&assessment),
+            &AuthoritySpecificInformation::new(value),
+        )
+    };
+    assert_eq!(
+        migrate_assessment(serde_json::json!({"_version": 3})),
+        Ok(None)
+    );
+    assert!(matches!(
+        migrate_assessment(serde_json::json!({"_version": 1})),
+        Err(MigrationRefused::TooOld(_))
+    ));
+    assert!(matches!(
+        migrate(serde_json::json!({"_version": 3})),
+        Err(MigrationRefused::Newer(_))
+    ));
+}
+
+#[test]
+fn a_refusal_shows_its_message() {
+    let refused = MigrationRefused::Newer("saved by a newer app".into());
+    assert_eq!(refused.message(), "saved by a newer app");
+    assert_eq!(refused.to_string(), "saved by a newer app");
+}
+
+#[test]
 fn the_default_refuses_no_version_and_a_non_object_as_unreadable() {
     for value in [
         serde_json::json!({}),
+        serde_json::json!({"_version": "1"}),
+        serde_json::json!({"_version": 1.5}),
         serde_json::json!("x"),
         serde_json::Value::Null,
     ] {
