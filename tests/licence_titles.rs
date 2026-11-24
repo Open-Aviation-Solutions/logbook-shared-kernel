@@ -65,6 +65,19 @@ impl LicensingAuthority for Example {
         ]
     }
 
+    fn ratings_and_endorsements(&self) -> Vec<Term> {
+        vec![
+            Term {
+                id: TermId::new("second"),
+                name: "second rating".into(),
+            },
+            Term {
+                id: TermId::new("first"),
+                name: "first endorsement".into(),
+            },
+        ]
+    }
+
     fn minimum_ages(&self) -> MinimumAges {
         MinimumAges::default()
     }
@@ -228,4 +241,14 @@ fn a_year_is_complete_on_1_march_for_one_born_on_29_february() {
     assert_eq!(check(date!(2021 - 03 - 01)), []);
     // Before the birth the holder is not yet any age.
     assert_eq!(check(date!(2003 - 01 - 01)).len(), 1);
+}
+
+#[test]
+fn ratings_and_endorsements_are_listed_in_the_authoritys_order() {
+    let ids: Vec<_> = authority()
+        .ratings_and_endorsements()
+        .into_iter()
+        .map(|term| term.id)
+        .collect();
+    assert_eq!(ids, [TermId::new("second"), TermId::new("first")]);
 }

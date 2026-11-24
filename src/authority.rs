@@ -86,6 +86,16 @@ pub trait LicensingAuthority {
     /// share a term id.
     fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
 
+    /// Every rating and endorsement the authority issues, each by its id and
+    /// its name in the authority's words, in the authority's order. A
+    /// [`TermId`] that [`Classification::requires`] gives is one of these, so a
+    /// rating or endorsement a pilot holds is matched against what an aircraft
+    /// requires by equal ids.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// no id is listed twice.
+    fn ratings_and_endorsements(&self) -> Vec<Term>;
+
     /// The minimum age at which each Annex 1 title is first issued, under
     /// these rules: required, so an authority states its ages even where they
     /// are Annex 1's ([`MinimumAges::default`]). A host builds the

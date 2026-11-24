@@ -13,7 +13,7 @@ use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
     LicenceTitleTerm, LicensingAuthority, Logbook, Measure, MigrationRefused, Problem, Questions,
-    Record, Requirement, RequirementId, Subject, Total,
+    Record, Requirement, RequirementId, Subject, Term, Total,
 };
 use time::Date;
 
@@ -43,6 +43,10 @@ impl LicensingAuthority for FlightsOnly {
     }
 
     fn licence_titles(&self) -> Vec<LicenceTitleTerm> {
+        Vec::new()
+    }
+
+    fn ratings_and_endorsements(&self) -> Vec<Term> {
         Vec::new()
     }
 
