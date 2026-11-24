@@ -504,14 +504,22 @@ fn a_capacity_condition_holds_only_for_an_entry() {
             .collect()
     };
     assert_eq!(keys(Record::Entry(&entry)), ["first", "pic"]);
-    assert_eq!(keys(Record::Assessment(&assessment)), ["first"]);
+    // Not even with an entry of that capacity for the assessment's flight.
+    let record = Record::Assessment {
+        assessment: &assessment,
+        entry: Some(&entry),
+    };
+    assert_eq!(keys(record), ["first"]);
 }
 
 #[test]
 fn an_assessments_answers_apply_remove_and_leave_unanswered_as_an_entrys_do() {
     let questions = with_capacity_question();
     let assessment = assessment("a");
-    let record = Record::Assessment(&assessment);
+    let record = Record::Assessment {
+        assessment: &assessment,
+        entry: None,
+    };
     let keys = |questions: Vec<&Question>| -> Vec<&'static str> {
         questions.into_iter().map(|question| question.key).collect()
     };
@@ -544,7 +552,13 @@ fn a_records_information_is_found_by_its_authority() {
     assessment
         .authority_information
         .insert(authority.clone(), information.clone());
-    for record in [Record::Entry(&entry), Record::Assessment(&assessment)] {
+    for record in [
+        Record::Entry(&entry),
+        Record::Assessment {
+            assessment: &assessment,
+            entry: None,
+        },
+    ] {
         assert_eq!(record.information_for(&authority), Some(&information));
         assert_eq!(record.information_for(&other), None);
     }
@@ -605,7 +619,12 @@ fn a_record_condition_holds_only_for_an_entry_of_its_kind_or_that_records_an_app
     assert_eq!(keys(Record::Entry(&flight)), ["flight"]);
     assert_eq!(keys(Record::Entry(&session)), ["session"]);
     assert_eq!(keys(Record::Entry(&approached)), ["flight", "approach"]);
-    assert!(keys(Record::Assessment(&assessment)).is_empty());
+    // Not even with an entry for the assessment's flight that meets them.
+    let record = Record::Assessment {
+        assessment: &assessment,
+        entry: Some(&approached),
+    };
+    assert!(keys(record).is_empty());
 }
 
 #[test]
@@ -715,5 +734,12 @@ fn an_any_condition_holds_when_any_of_its_conditions_does() {
         ["count", "follow_up"]
     );
     assert_eq!(keys(Record::Entry(&flight), json!({"count": 0})), ["count"]);
-    assert!(keys(Record::Assessment(&assessment), json!({"count": 1})).is_empty());
+    assert!(keys(
+        Record::Assessment {
+            assessment: &assessment,
+            entry: None
+        },
+        json!({"count": 1})
+    )
+    .is_empty());
 }

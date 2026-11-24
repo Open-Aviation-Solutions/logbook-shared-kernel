@@ -12,7 +12,14 @@ use super::{Assessment, AuthorityId, AuthoritySpecificInformation, Entry};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Record<'a> {
     Entry(&'a Entry),
-    Assessment(&'a Assessment),
+    /// An assessment, with the pilot's entry for the assessment's flight
+    /// (`None` when the pilot has no entry for it), so that the authority
+    /// can see the aircraft the assessment was conducted in. The authority
+    /// classifies the entry's aircraft itself, as it does for its currency.
+    Assessment {
+        assessment: &'a Assessment,
+        entry: Option<&'a Entry>,
+    },
 }
 
 impl<'a> Record<'a> {
@@ -23,7 +30,7 @@ impl<'a> Record<'a> {
     ) -> Option<&'a AuthoritySpecificInformation> {
         match self {
             Self::Entry(entry) => entry.authority_information().get(authority),
-            Self::Assessment(assessment) => assessment.authority_information.get(authority),
+            Self::Assessment { assessment, .. } => assessment.authority_information.get(authority),
         }
     }
 }

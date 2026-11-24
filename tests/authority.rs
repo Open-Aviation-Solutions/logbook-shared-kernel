@@ -67,7 +67,7 @@ impl LicensingAuthority for FlightsOnly {
     fn questions_for(&self, record: Record) -> Questions {
         match record {
             Record::Entry(_) => Questions::new(1, Vec::new()),
-            Record::Assessment(_) => Questions::new(3, Vec::new()),
+            Record::Assessment { .. } => Questions::new(3, Vec::new()),
         }
     }
 
@@ -184,7 +184,10 @@ fn the_default_reads_the_version_for_the_kind_of_record() {
     let assessment = assessment("a");
     let migrate_assessment = |value| {
         authority().migrate_information(
-            Record::Assessment(&assessment),
+            Record::Assessment {
+                assessment: &assessment,
+                entry: None,
+            },
             &AuthoritySpecificInformation::new(value),
         )
     };

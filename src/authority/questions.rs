@@ -385,6 +385,9 @@ pub struct ChoiceKind {
 /// key no question has, is never met, and the question it is on never
 /// applies. Nothing checks the questions for this.
 ///
+/// A condition on the record reads the record itself: for an assessment,
+/// not the entry given with it ([`Record::Assessment`]).
+///
 /// It is `#[non_exhaustive]`, so that a condition added later is not a
 /// breaking release: only this crate evaluates conditions. A consumer that
 /// uses a condition added in a patch requires that patch (`^0.4.1`, say), as
@@ -428,11 +431,11 @@ impl Condition {
             }
             Self::Session => match record {
                 Record::Entry(entry) => matches!(entry.subject(), Subject::Session { .. }),
-                Record::Assessment(_) => false,
+                Record::Assessment { .. } => false,
             },
             Self::Flight => match record {
                 Record::Entry(entry) => matches!(entry.subject(), Subject::Flight { .. }),
-                Record::Assessment(_) => false,
+                Record::Assessment { .. } => false,
             },
             Self::AnyApproach => {
                 matches!(record, Record::Entry(entry) if !entry.approaches().is_empty())
