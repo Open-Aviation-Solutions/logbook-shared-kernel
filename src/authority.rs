@@ -154,10 +154,12 @@ pub trait LicensingAuthority {
     /// ([`AuthoritySpecificInformation::version`]): `None` for information
     /// not saved yet.
     ///
-    /// The host also asks again about each assessment on a flight when the
-    /// pilot's entry for that flight is changed or deleted, with the entry
-    /// as it would be (`None` once deleted), and refuses the change when a
-    /// problem with any of them is a refusal.
+    /// The host also asks again about each assessment on a flight whenever
+    /// the pilot's entries for that flight change (one is added, changed or
+    /// deleted), with the entries as they would be (`None` when none would
+    /// remain) and the assessment's stored information, for each authority
+    /// that holds information on it; it refuses the change when a problem
+    /// with any of them is a refusal.
     ///
     /// An authority that asks nothing about a kind of record returns no
     /// questions for it, and so reports no problem at a question.
