@@ -34,8 +34,8 @@ wants the records without the interface):
   aircraft and its totals, so that the host matches on an id and never on a
   name; the titles of licence it issues (`LicenceTitleTerm`: Annex 1's under
   its own term, or its own with a minimum age), the ratings and endorsements it
-  issues (`ratings_and_endorsements`, each a `Term`), the minimum ages it sets for Annex 1's
-  (`minimum_ages`), the own titles held under a licence
+  issues (`ratings_and_endorsements`, each a `Term`), the minimum ages it sets
+  for Annex 1's (`minimum_ages`), the own titles held under a licence
   (`HeldLicenceTitle`; Annex 1's are the kernel's `Licence::titles`) and the
   rules over a licence's titles that hold for any authority
   (`licence_title_problems`); the accumulator and check traits, the event window and

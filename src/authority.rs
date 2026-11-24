@@ -87,13 +87,15 @@ pub trait LicensingAuthority {
     fn licence_titles(&self) -> Vec<LicenceTitleTerm>;
 
     /// Every rating and endorsement the authority issues, each by its id and
-    /// its name in the authority's words, in the authority's order. A
-    /// [`TermId`] that [`Classification::requires`] gives is one of these, so a
-    /// rating or endorsement a pilot holds is matched against what an aircraft
-    /// requires by equal ids.
+    /// its name in the authority's words, in the authority's order. A host
+    /// may match the ones a pilot holds against what an aircraft requires
+    /// ([`Classification::requires`]) by equal ids, to show whether they are
+    /// held; the checks stay the authority's own.
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
-    /// no id is listed twice.
+    /// no id is listed twice, no id is also a title of licence's
+    /// ([`licence_titles`](LicensingAuthority::licence_titles)), and a
+    /// [`TermId`] that `requires` gives is one of these.
     fn ratings_and_endorsements(&self) -> Vec<Term>;
 
     /// The minimum age at which each Annex 1 title is first issued, under
@@ -261,7 +263,8 @@ pub struct Requirement {
 }
 
 /// Identifies one of an authority's terms: a category or class an aircraft
-/// counts as, something it requires to fly one, one of its totals, or a title of licence. The
+/// counts as, something it requires to fly one, one of its totals, a title of licence, or a rating
+/// or endorsement. The
 /// authority's, stable, and opaque: the host matches on it, never on a
 /// term's name, so the authority can reword a name freely. Classification
 /// and totals share it, so a total can be identified as one of the
@@ -288,8 +291,9 @@ pub struct Term {
 }
 
 /// What an aircraft counts as under an authority's rules, and what they
-/// require to fly it, in the authority's terms. The host only shows it: the
-/// checks that need it are the authority's own.
+/// require to fly it, in the authority's terms. The host only shows it, and may match what
+/// is required against the ratings and endorsements a pilot holds to show
+/// whether they are held: the checks that need it are the authority's own.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Classification {
     /// Its category and class (CASR 1998 regs 61.015 and 61.020, say).
