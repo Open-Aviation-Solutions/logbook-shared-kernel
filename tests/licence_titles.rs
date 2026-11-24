@@ -65,6 +65,19 @@ impl LicensingAuthority for Example {
         ]
     }
 
+    fn ratings_and_endorsements(&self) -> Vec<Term> {
+        vec![
+            Term {
+                id: TermId::new("second"),
+                name: "second rating".into(),
+            },
+            Term {
+                id: TermId::new("first"),
+                name: "first endorsement".into(),
+            },
+        ]
+    }
+
     fn minimum_ages(&self) -> MinimumAges {
         MinimumAges::default()
     }
