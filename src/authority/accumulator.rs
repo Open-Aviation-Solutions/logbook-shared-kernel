@@ -68,10 +68,9 @@ mod tests {
     use std::collections::BTreeMap;
 
     use time::macros::date;
-    use uuid::Uuid;
 
     use super::*;
-    use crate::entry::AssessmentId;
+    use crate::entry::{AssessmentId, EntryId};
 
     /// The ids of the assessments it was given.
     #[derive(Default)]
@@ -88,7 +87,7 @@ mod tests {
         let assessment = Assessment {
             id: AssessmentId::new("a"),
             date: date!(2024 - 08 - 02),
-            flight: Uuid::nil(),
+            entry: EntryId::new("e"),
             authority_information: BTreeMap::new(),
         };
         let (mut first, mut second) = (Seen::default(), Seen::default());

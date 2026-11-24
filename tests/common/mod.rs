@@ -75,13 +75,13 @@ pub fn session_parts(id: &str, capacity: Capacity) -> EntryParts {
     }
 }
 
-/// An assessment conducted on [`flight`]'s flight, with no
+/// An assessment conducted on `entry`'s flight or session, with no
 /// authority-specific information.
-pub fn assessment(id: &str) -> Assessment {
+pub fn assessment(id: &str, entry: &Entry) -> Assessment {
     Assessment {
         id: AssessmentId::new(id),
-        date: date!(2026 - 11 - 05),
-        flight: Uuid::nil(),
+        date: entry.date(),
+        entry: entry.id().clone(),
         authority_information: BTreeMap::new(),
     }
 }
