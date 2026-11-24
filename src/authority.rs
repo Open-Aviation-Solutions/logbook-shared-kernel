@@ -139,8 +139,8 @@ pub trait LicensingAuthority {
     /// `record`, each at a question or at the information as a whole
     /// ([`ProblemAt`]): a missing or unsupported version is reported at the
     /// information as a whole. The record gives the context (an entry's
-    /// capacity, say, or an assessment's aircraft, from the pilot's entry for
-    /// its flight given with it); the information is what is checked, and is
+    /// capacity, say, or an assessment's aircraft, from the entry it names,
+    /// given with it); the information is what is checked, and is
     /// the one passed, not the record's own.
     ///
     /// The host saves a record's information in this order: it finds the
@@ -154,12 +154,12 @@ pub trait LicensingAuthority {
     /// ([`AuthoritySpecificInformation::version`]): `None` for information
     /// not saved yet.
     ///
-    /// The host also asks again about each assessment on a flight whenever
-    /// the pilot's entries for that flight change (one is added, changed or
-    /// deleted), with the entries as they would be (`None` when none would
-    /// remain) and the assessment's stored information, for each authority
-    /// that holds information on it; it refuses the change when a problem
-    /// with any of them is a refusal.
+    /// The host also asks again about each assessment that names an entry
+    /// whenever that entry is changed, with the entry as it would be and the
+    /// assessment's stored information, for each authority that holds
+    /// information on it; it refuses the change when a problem with any of
+    /// them is a refusal. It does not delete an entry that an assessment
+    /// names.
     ///
     /// An authority that asks nothing about a kind of record returns no
     /// questions for it, and so reports no problem at a question.

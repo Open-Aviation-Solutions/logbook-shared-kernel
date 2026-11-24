@@ -222,7 +222,7 @@ mod tests {
         Assessment {
             id: AssessmentId::new(id),
             date: on,
-            flight: Uuid::nil(),
+            entry: EntryId::new("a"),
             authority_information: BTreeMap::new(),
         }
     }

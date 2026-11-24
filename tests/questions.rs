@@ -495,7 +495,7 @@ fn with_capacity_question() -> Questions {
 fn a_capacity_condition_holds_only_for_an_entry() {
     let questions = with_capacity_question();
     let entry = flight("e", Capacity::PilotInCommand);
-    let assessment = assessment("a");
+    let assessment = assessment("a", &entry);
     let keys = |record| -> Vec<&'static str> {
         questions
             .applicable_for(record, None)
@@ -504,10 +504,10 @@ fn a_capacity_condition_holds_only_for_an_entry() {
             .collect()
     };
     assert_eq!(keys(Record::Entry(&entry)), ["first", "pic"]);
-    // Not even with an entry of that capacity for the assessment's flight.
+    // Not even when the entry it names is of that capacity.
     let record = Record::Assessment {
         assessment: &assessment,
-        entry: Some(&entry),
+        entry: &entry,
     };
     assert_eq!(keys(record), ["first"]);
 }
@@ -515,10 +515,11 @@ fn a_capacity_condition_holds_only_for_an_entry() {
 #[test]
 fn an_assessments_answers_apply_remove_and_leave_unanswered_as_an_entrys_do() {
     let questions = with_capacity_question();
-    let assessment = assessment("a");
+    let entry = flight("e", Capacity::PilotInCommand);
+    let assessment = assessment("a", &entry);
     let record = Record::Assessment {
         assessment: &assessment,
-        entry: None,
+        entry: &entry,
     };
     let keys = |questions: Vec<&Question>| -> Vec<&'static str> {
         questions.into_iter().map(|question| question.key).collect()
@@ -548,7 +549,7 @@ fn a_records_information_is_found_by_its_authority() {
         .authority_information
         .insert(authority.clone(), information.clone());
     let entry = Entry::new(parts).unwrap();
-    let mut assessment = assessment("a");
+    let mut assessment = assessment("a", &entry);
     assessment
         .authority_information
         .insert(authority.clone(), information.clone());
@@ -556,7 +557,7 @@ fn a_records_information_is_found_by_its_authority() {
         Record::Entry(&entry),
         Record::Assessment {
             assessment: &assessment,
-            entry: None,
+            entry: &entry,
         },
     ] {
         assert_eq!(record.information_for(&authority), Some(&information));
@@ -608,7 +609,7 @@ fn a_record_condition_holds_only_for_an_entry_of_its_kind_or_that_records_an_app
     let mut parts = flight_parts("a", Capacity::PilotInCommand);
     parts.approaches.push(an_approach());
     let approached = Entry::new(parts).unwrap();
-    let assessment = assessment("x");
+    let assessment = assessment("x", &approached);
     let keys = |record| -> Vec<&'static str> {
         questions
             .applicable_for(record, None)
@@ -619,10 +620,10 @@ fn a_record_condition_holds_only_for_an_entry_of_its_kind_or_that_records_an_app
     assert_eq!(keys(Record::Entry(&flight)), ["flight"]);
     assert_eq!(keys(Record::Entry(&session)), ["session"]);
     assert_eq!(keys(Record::Entry(&approached)), ["flight", "approach"]);
-    // Not even with an entry for the assessment's flight that meets them.
+    // Not even when the entry it names meets them.
     let record = Record::Assessment {
         assessment: &assessment,
-        entry: Some(&approached),
+        entry: &approached,
     };
     assert!(keys(record).is_empty());
 }
@@ -716,7 +717,7 @@ fn an_any_condition_holds_when_any_of_its_conditions_does() {
     parts.approaches.push(an_approach());
     let approached = Entry::new(parts).unwrap();
     let flight = flight("e", Capacity::PilotInCommand);
-    let assessment = assessment("x");
+    let assessment = assessment("x", &flight);
     let keys = |record, answers: Value| -> Vec<&'static str> {
         let information = AuthoritySpecificInformation::new(answers);
         questions
@@ -737,7 +738,7 @@ fn an_any_condition_holds_when_any_of_its_conditions_does() {
     assert!(keys(
         Record::Assessment {
             assessment: &assessment,
-            entry: None
+            entry: &flight
         },
         json!({"count": 1})
     )

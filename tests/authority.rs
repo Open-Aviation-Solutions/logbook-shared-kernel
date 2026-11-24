@@ -181,12 +181,13 @@ fn the_default_refuses_an_older_version_as_too_old() {
 
 #[test]
 fn the_default_reads_the_version_for_the_kind_of_record() {
-    let assessment = assessment("a");
+    let entry = flight("e", Capacity::PilotInCommand);
+    let assessment = assessment("a", &entry);
     let migrate_assessment = |value| {
         authority().migrate_information(
             Record::Assessment {
                 assessment: &assessment,
-                entry: None,
+                entry: &entry,
             },
             &AuthoritySpecificInformation::new(value),
         )
