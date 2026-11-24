@@ -11,9 +11,9 @@ use common::{assessment, flight, session};
 use icao_shared_kernel::{Capacity, MinimumAges};
 use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
-    AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator,
+    AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator, EventsNoun,
     LicenceTitleTerm, LicensingAuthority, Logbook, Measure, MigrationRefused, Problem, Questions,
-    Record, Requirement, RequirementId, Subject, Total,
+    Record, Requirement, RequirementId, RequirementKind, Subject, Total,
 };
 use time::Date;
 
@@ -223,4 +223,28 @@ fn the_default_refuses_no_version_and_a_non_object_as_unreadable() {
             Err(MigrationRefused::Unreadable(_))
         ));
     }
+}
+
+#[test]
+fn a_requirement_is_set_on_its_own_with_no_events_noun_until_given_them() {
+    let requirement = Requirement::new(
+        RequirementId::new("take-offs"),
+        "recent experience",
+        "3 take-offs in the past 90 days",
+        RequirementKind::RecentExperience,
+        "reg",
+    );
+    assert_eq!((&requirement.events, &requirement.set), (&None, &None));
+
+    let requirement = requirement
+        .with_events(EventsNoun {
+            one: "take-off".into(),
+            other: "take-offs".into(),
+        })
+        .with_set("reg");
+    assert_eq!(
+        requirement.events.map(|noun| (noun.one, noun.other)),
+        Some(("take-off".to_owned(), "take-offs".to_owned()))
+    );
+    assert_eq!(requirement.set.as_deref(), Some("reg"));
 }
