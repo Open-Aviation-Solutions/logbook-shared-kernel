@@ -244,8 +244,9 @@ impl RequirementId {
 }
 
 /// A requirement an authority checks, with everything a host shows of it in
-/// the authority's words, so that the host holds no wording or grouping of
-/// its own keyed by an authority's ids or regulations.
+/// the authority's words, so that the host holds no wording or grouping keyed
+/// by an authority's ids or regulations. The host words only a heading for
+/// each [`RequirementKind`], which is the kernel's.
 ///
 /// Non-exhaustive, and built with [`Requirement::new`], so that a field added
 /// later is not a breaking change.
@@ -259,13 +260,15 @@ pub struct Requirement {
     /// 6 months", say.
     pub description: String,
     /// The noun its events are counted in, for a requirement met by a count
-    /// of events; the host does the counting.
+    /// of events. The authority's checks count them
+    /// ([`CurrencyResult`]); the host shows a count with this noun.
     pub events: Option<EventsNoun>,
     /// A key shared by the requirements a regulation sets together, so that
     /// the host shows them as one set without reading their ids. The
     /// authority's, and opaque. `None`: it is set on its own.
     pub set: Option<String>,
-    /// Whether it is recent experience or a periodic assessment.
+    /// Whether it is recent experience or a periodic assessment, which the
+    /// host groups requirements under for its headings.
     pub kind: RequirementKind,
     /// The regulation that sets it.
     pub regulation: &'static str,
@@ -313,8 +316,8 @@ impl Requirement {
 /// The noun a requirement's events are counted in, in both of its forms, so
 /// that no host makes a plural: "take-off" and "take-offs", say. The fields
 /// are named for the plural categories they are used in (one take-off, any
-/// other number of take-offs), which leaves room for a language with more
-/// forms.
+/// other number of take-offs). A language with more forms would need a form
+/// added, which is a breaking change.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EventsNoun {
     /// The form for one event.
@@ -324,7 +327,9 @@ pub struct EventsNoun {
 }
 
 /// The kind of a requirement, which holds for every authority's: the host
-/// words a heading for each kind.
+/// words a heading for each kind. It groups requirements for those headings
+/// and says nothing about what meets one: an assessment can meet a recent
+/// experience requirement too.
 ///
 /// Non-exhaustive, so that a kind an authority needs later is not a breaking
 /// change: a host lists a kind it does not know under a heading of its own.
@@ -334,8 +339,10 @@ pub enum RequirementKind {
     /// Recent experience: what the pilot must have done in a past period to
     /// exercise a privilege (CASR 1998 reg 61.395, say).
     RecentExperience,
-    /// A periodic assessment, such as a flight review or a proficiency
-    /// check, which an [`Assessment`](crate::entry::Assessment) meets.
+    /// A periodic assessment: the kernel's term for the requirements Part 61
+    /// meets with a flight review or a proficiency check, named for the
+    /// kernel's [`Assessment`](crate::entry::Assessment), which records one,
+    /// as decided on logbook-shared-kernel#46. No regulation uses the term.
     PeriodicAssessment,
 }
 
