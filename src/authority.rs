@@ -140,12 +140,15 @@ pub trait LicensingAuthority {
     ///
     /// `held` is the id of each title of licence, rating and endorsement the
     /// pilot holds under the licences this authority issued, on the day the
-    /// host asks about: a title by the authority's term for it
-    /// ([`LicenceTitleTerm::term`], an Annex 1 title's as its own's), a rating
-    /// or endorsement by its id in
-    /// [`ratings_and_endorsements`](LicensingAuthority::ratings_and_endorsements).
-    /// The host chooses the day, and leaves out what was first issued after
-    /// it. What a requirement applies to is the authority's own rule (a
+    /// host asks about. An Annex 1 title (one of `Licence::titles`) is held
+    /// by the id of the authority's term for it: `term().id` of the
+    /// [`LicenceTitleTerm`] for that title in
+    /// [`licence_titles`](LicensingAuthority::licence_titles). An own title
+    /// ([`HeldLicenceTitle::title`]) and a rating or endorsement are held by
+    /// their ids as they are, which are the authority's already. The host
+    /// chooses the day, and leaves out what was first issued after it. An id
+    /// that is wrong is not reported: it makes fewer requirements apply.
+    /// What a requirement applies to is the authority's own rule (a
     /// requirement for one category of aircraft, say, may apply to any title
     /// or rating in that category); an id the authority does not issue makes
     /// nothing apply.

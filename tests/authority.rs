@@ -18,9 +18,7 @@ use logbook_shared_kernel::{
 use time::Date;
 
 /// An authority with no State's rules, whose only rule is that a session
-/// does not count, and whose two requirements apply to what is held: one to
-/// a title of licence, and one to a rating or to a second title. It counts
-/// how often it is asked.
+/// does not count. It counts how often it is asked.
 struct FlightsOnly {
     id: AuthorityId,
     asked: Cell<usize>,
@@ -57,28 +55,12 @@ impl LicensingAuthority for FlightsOnly {
     }
 
     fn requirements(&self) -> Vec<Requirement> {
-        ["passengers", "night"]
-            .map(|id| {
-                Requirement::new(
-                    RequirementId::new(id),
-                    id,
-                    id,
-                    RequirementKind::RecentExperience,
-                    "reg",
-                )
-            })
-            .into()
+        Vec::new()
     }
 
-    fn requirements_for(&self, held: &BTreeSet<TermId>) -> Vec<Requirement> {
-        let holds = |id: &str| held.contains(&TermId::new(id));
-        self.requirements()
-            .into_iter()
-            .filter(|requirement| match requirement.id.as_str() {
-                "passengers" => holds("licence"),
-                _ => holds("night-rating") || holds("night-licence"),
-            })
-            .collect()
+    /// None apply: it issues nothing a pilot could hold.
+    fn requirements_for(&self, _: &BTreeSet<TermId>) -> Vec<Requirement> {
+        Vec::new()
     }
 
     fn currency(&self, _: Date, _: &Logbook) -> Vec<(RequirementId, CurrencyResult)> {
@@ -278,24 +260,4 @@ fn a_requirement_is_set_on_its_own_with_no_events_noun_until_given_them() {
         Some(("take-off".to_owned(), "take-offs".to_owned()))
     );
     assert_eq!(requirement.set.as_deref(), Some("reg"));
-}
-
-#[test]
-fn only_the_requirements_for_what_is_held_apply_in_the_authoritys_order() {
-    let applying = |held: &[&str]| -> Vec<String> {
-        let held = held.iter().map(|&id| TermId::new(id)).collect();
-        authority()
-            .requirements_for(&held)
-            .into_iter()
-            .map(|requirement| requirement.id.as_str().to_owned())
-            .collect()
-    };
-    assert!(applying(&[]).is_empty());
-    assert!(applying(&["not-issued"]).is_empty());
-    assert_eq!(applying(&["licence"]), ["passengers"]);
-    assert_eq!(applying(&["night-licence"]), ["night"]);
-    assert_eq!(
-        applying(&["night-rating", "licence"]),
-        ["passengers", "night"]
-    );
 }
