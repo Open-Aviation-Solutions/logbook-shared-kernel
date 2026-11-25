@@ -308,10 +308,11 @@ pub struct Requirement {
     /// of events. The authority's checks count them
     /// ([`CurrencyResult`]); the host shows a count with this noun.
     pub events: Option<EventsNoun>,
-    /// A key shared by the requirements a regulation sets together, so that
-    /// the host shows them as one set without reading their ids. The
-    /// authority's, and opaque. `None`: it is set on its own.
-    pub set: Option<String>,
+    /// The set a regulation sets it together with others in, so that the host
+    /// shows the set as one check without reading the members' ids or names.
+    /// Each member keeps its own name, description and events, so that the
+    /// host can say which is short. `None`: it is set on its own.
+    pub set: Option<RequirementSet>,
     /// Whether it is recent experience or a periodic assessment, which the
     /// host groups requirements under for its headings.
     pub kind: RequirementKind,
@@ -349,11 +350,42 @@ impl Requirement {
         }
     }
 
-    /// The requirement, set together with the others whose set is `set`.
-    pub fn with_set(self, set: impl Into<String>) -> Self {
+    /// The requirement, set together with the others in `set`.
+    pub fn with_set(self, set: RequirementSet) -> Self {
         Self {
-            set: Some(set.into()),
+            set: Some(set),
             ..self
+        }
+    }
+}
+
+/// What a host shows of a set of requirements a regulation sets together, in
+/// the authority's words: one check that is met when every member is.
+///
+/// Non-exhaustive, and built with [`RequirementSet::new`], so that a field
+/// added later is not a breaking change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct RequirementSet {
+    /// The key its members share. The authority's, and opaque.
+    pub key: String,
+    /// Its name: "Carrying a passenger by day in an aeroplane", say.
+    pub name: String,
+    /// What meets it: "At least 3 take-offs and 3 landings, by day or night,
+    /// in the past 90 days", say.
+    pub description: String,
+}
+
+impl RequirementSet {
+    pub fn new(
+        key: impl Into<String>,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            key: key.into(),
+            name: name.into(),
+            description: description.into(),
         }
     }
 }
