@@ -128,8 +128,9 @@ pub trait LicensingAuthority {
 
     /// The requirements these rules check, each with its id, its name in the
     /// regulation's words, a description of what meets it, the noun its
-    /// events are counted in, the requirements set with it, its kind, and the
-    /// regulation it is set by. Every one of them, whatever a pilot holds:
+    /// events are counted in, the set it belongs to (with that set's name and
+    /// description, in the authority's words), its kind, and the regulation it
+    /// is set by. Every one of them, whatever a pilot holds:
     /// [`requirements_for`](LicensingAuthority::requirements_for) answers
     /// those that apply to a pilot.
     fn requirements(&self) -> Vec<Requirement>;
@@ -154,7 +155,9 @@ pub trait LicensingAuthority {
     /// nothing apply.
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
-    /// each requirement answered is one of `requirements`, answered once.
+    /// each requirement answered is one of `requirements`, answered once; and
+    /// the members of a set apply together, so a set is answered whole or not
+    /// at all, never with some of its members.
     fn requirements_for(&self, held: &BTreeSet<TermId>) -> Vec<Requirement>;
 
     /// Each requirement's result on a day.
@@ -311,7 +314,9 @@ pub struct Requirement {
     /// The set a regulation sets it together with others in, so that the host
     /// shows the set as one check without reading the members' ids or names.
     /// Each member keeps its own name, description and events, so that the
-    /// host can say which is short. `None`: it is set on its own.
+    /// host can say which is short. Members sharing a set's `key` carry equal
+    /// sets (the same name and description), which the authority keeps and
+    /// nothing checks. `None`: it is set on its own.
     pub set: Option<RequirementSet>,
     /// Whether it is recent experience or a periodic assessment, which the
     /// host groups requirements under for its headings.
@@ -377,6 +382,7 @@ pub struct RequirementSet {
 }
 
 impl RequirementSet {
+    /// A set from its `key`, its `name` and its `description`, in that order.
     pub fn new(
         key: impl Into<String>,
         name: impl Into<String>,
