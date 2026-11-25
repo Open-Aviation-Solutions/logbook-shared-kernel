@@ -38,8 +38,11 @@ wants the records without the interface):
   for Annex 1's (`minimum_ages`), the own titles held under a licence
   (`HeldLicenceTitle`; Annex 1's are the kernel's `Licence::titles`) and the
   rules over a licence's titles that hold for any authority
-  (`licence_title_problems`); the accumulator and check traits, the event window and
-  `CurrencyResult`, so each authority writes its currency checks over the same machinery; and the
+  (`licence_title_problems`); the requirements that apply to the titles,
+  ratings and endorsements a pilot holds, by their ids (`requirements_for`;
+  which requirement applies to what is the authority's own rule); the
+  accumulator and check traits, the event window and `CurrencyResult`, so
+  each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on
   a user interface.
