@@ -86,6 +86,10 @@ impl LicensingAuthority for Example {
         Vec::new()
     }
 
+    fn requirements_for(&self, _: &BTreeSet<TermId>) -> Vec<Requirement> {
+        Vec::new()
+    }
+
     fn currency(&self, _: Date, _: &Logbook) -> Vec<(RequirementId, CurrencyResult)> {
         Vec::new()
     }

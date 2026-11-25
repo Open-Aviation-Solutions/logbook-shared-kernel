@@ -129,8 +129,30 @@ pub trait LicensingAuthority {
     /// The requirements these rules check, each with its id, its name in the
     /// regulation's words, a description of what meets it, the noun its
     /// events are counted in, the requirements set with it, its kind, and the
-    /// regulation it is set by.
+    /// regulation it is set by. Every one of them, whatever a pilot holds:
+    /// [`requirements_for`](LicensingAuthority::requirements_for) answers
+    /// those that apply to a pilot.
     fn requirements(&self) -> Vec<Requirement>;
+
+    /// The requirements that apply to a pilot who holds `held`, in the order
+    /// of [`requirements`](LicensingAuthority::requirements). A requirement
+    /// applies only for something held, so nothing held answers none.
+    ///
+    /// `held` is the id of each title of licence, rating and endorsement the
+    /// pilot holds under the licences this authority issued, on the day the
+    /// host asks about: a title by the authority's term for it
+    /// ([`LicenceTitleTerm::term`], an Annex 1 title's as its own's), a rating
+    /// or endorsement by its id in
+    /// [`ratings_and_endorsements`](LicensingAuthority::ratings_and_endorsements).
+    /// The host chooses the day, and leaves out what was first issued after
+    /// it. What a requirement applies to is the authority's own rule (a
+    /// requirement for one category of aircraft, say, may apply to any title
+    /// or rating in that category); an id the authority does not issue makes
+    /// nothing apply.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// each requirement answered is one of `requirements`, answered once.
+    fn requirements_for(&self, held: &BTreeSet<TermId>) -> Vec<Requirement>;
 
     /// Each requirement's result on a day.
     fn currency(&self, as_of: Date, logbook: &Logbook) -> Vec<(RequirementId, CurrencyResult)>;
