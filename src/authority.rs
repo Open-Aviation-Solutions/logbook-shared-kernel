@@ -128,8 +128,9 @@ pub trait LicensingAuthority {
 
     /// The requirements these rules check, each with its id, its name in the
     /// regulation's words, a description of what meets it, the noun its
-    /// events are counted in, the requirements set with it, its kind, and the
-    /// regulation it is set by. Every one of them, whatever a pilot holds:
+    /// events are counted in, the set it belongs to (with that set's name and
+    /// description, in the authority's words), its kind, and the regulation it
+    /// is set by. Every one of them, whatever a pilot holds:
     /// [`requirements_for`](LicensingAuthority::requirements_for) answers
     /// those that apply to a pilot.
     fn requirements(&self) -> Vec<Requirement>;
@@ -154,7 +155,9 @@ pub trait LicensingAuthority {
     /// nothing apply.
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
-    /// each requirement answered is one of `requirements`, answered once.
+    /// each requirement answered is one of `requirements`, answered once; and
+    /// the members of a set apply together, so a set is answered whole or not
+    /// at all, never with some of its members.
     fn requirements_for(&self, held: &BTreeSet<TermId>) -> Vec<Requirement>;
 
     /// Each requirement's result on a day.
@@ -308,10 +311,13 @@ pub struct Requirement {
     /// of events. The authority's checks count them
     /// ([`CurrencyResult`]); the host shows a count with this noun.
     pub events: Option<EventsNoun>,
-    /// A key shared by the requirements a regulation sets together, so that
-    /// the host shows them as one set without reading their ids. The
-    /// authority's, and opaque. `None`: it is set on its own.
-    pub set: Option<String>,
+    /// The set a regulation sets it together with others in, so that the host
+    /// shows the set as one check without reading the members' ids or names.
+    /// Each member keeps its own name, description and events, so that the
+    /// host can say which is short. Members sharing a set's `key` carry equal
+    /// sets (the same name and description), which the authority keeps and
+    /// nothing checks. `None`: it is set on its own.
+    pub set: Option<RequirementSet>,
     /// Whether it is recent experience or a periodic assessment, which the
     /// host groups requirements under for its headings.
     pub kind: RequirementKind,
@@ -349,11 +355,43 @@ impl Requirement {
         }
     }
 
-    /// The requirement, set together with the others whose set is `set`.
-    pub fn with_set(self, set: impl Into<String>) -> Self {
+    /// The requirement, set together with the others in `set`.
+    pub fn with_set(self, set: RequirementSet) -> Self {
         Self {
-            set: Some(set.into()),
+            set: Some(set),
             ..self
+        }
+    }
+}
+
+/// What a host shows of a set of requirements a regulation sets together, in
+/// the authority's words: one check that is met when every member is.
+///
+/// Non-exhaustive, and built with [`RequirementSet::new`], so that a field
+/// added later is not a breaking change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct RequirementSet {
+    /// The key its members share. The authority's, and opaque.
+    pub key: String,
+    /// Its name: "Carrying a passenger by day in an aeroplane", say.
+    pub name: String,
+    /// What meets it: "At least 3 take-offs and 3 landings, by day or night,
+    /// in the past 90 days", say.
+    pub description: String,
+}
+
+impl RequirementSet {
+    /// A set from its `key`, its `name` and its `description`, in that order.
+    pub fn new(
+        key: impl Into<String>,
+        name: impl Into<String>,
+        description: impl Into<String>,
+    ) -> Self {
+        Self {
+            key: key.into(),
+            name: name.into(),
+            description: description.into(),
         }
     }
 }

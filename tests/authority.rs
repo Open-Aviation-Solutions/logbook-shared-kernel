@@ -13,7 +13,8 @@ use logbook_shared_kernel::{
     run, AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation,
     AuthorityTotal, Classification, CurrencyResult, DateRange, Entry, EntryAccumulator, EventsNoun,
     LicenceTitleTerm, LicensingAuthority, Logbook, Measure, MigrationRefused, Problem, Questions,
-    Record, Requirement, RequirementId, RequirementKind, Subject, Term, TermId, Total,
+    Record, Requirement, RequirementId, RequirementKind, RequirementSet, Subject, Term, TermId,
+    Total,
 };
 use time::Date;
 
@@ -254,10 +255,26 @@ fn a_requirement_is_set_on_its_own_with_no_events_noun_until_given_them() {
             one: "take-off".into(),
             other: "take-offs".into(),
         })
-        .with_set("reg");
+        .with_set(RequirementSet::new(
+            "reg",
+            "recent experience",
+            "3 take-offs and 3 landings in the past 90 days",
+        ));
     assert_eq!(
         requirement.events.map(|noun| (noun.one, noun.other)),
         Some(("take-off".to_owned(), "take-offs".to_owned()))
     );
-    assert_eq!(requirement.set.as_deref(), Some("reg"));
+    let set = requirement.set.expect("set");
+    assert_eq!(
+        (
+            set.key.as_str(),
+            set.name.as_str(),
+            set.description.as_str()
+        ),
+        (
+            "reg",
+            "recent experience",
+            "3 take-offs and 3 landings in the past 90 days"
+        )
+    );
 }
