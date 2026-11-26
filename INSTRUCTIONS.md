@@ -38,7 +38,9 @@ wants the records without the interface):
   for Annex 1's (`minimum_ages`), the own titles held under a licence
   (`HeldLicenceTitle`; Annex 1's are the kernel's `Licence::titles`) and the
   rules over a licence's titles that hold for any authority
-  (`licence_title_problems`); the requirements that apply to the titles,
+  (`licence_title_problems`); the problems with what is held under a licence,
+  each a refusal or a warning (`licence_problems`, the authority's own, none
+  by default); the requirements that apply to the titles,
   ratings and endorsements a pilot holds, by their ids (`requirements_for`;
   which requirement applies to what is the authority's own rule); the
   accumulator and check traits, the event window and `CurrencyResult`, so
