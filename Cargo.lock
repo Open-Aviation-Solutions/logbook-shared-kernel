@@ -153,9 +153,9 @@ checksum = "ed5909b6e89a2db4456e54cd5f673791d7eca6732202bbf2a9cc504fe2f9b84a"
 
 [[package]]
 name = "icao-shared-kernel"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e366e13ee9ffb014e2819300b86a49d95b6218b817e374c55def4d941170bcee"
+checksum = "c44420f48ab08d236ae9d26276f7351a3203325dddbc5da98e592d61d36727fc"
 dependencies = [
  "rust_decimal",
  "serde",
