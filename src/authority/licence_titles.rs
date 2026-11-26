@@ -113,10 +113,11 @@ pub enum LicenceTitleProblem {
 
 /// The problems with the titles under one licence, against the titles its
 /// authority issues, for a holder born on `date_of_birth`: the Annex 1 titles
-/// on `licence` the authority does not issue, then, for `own`, the authority's
-/// own titles held, in the order they are listed, those it does not issue, one
-/// listed more than once (reported once), and one first issued before its
-/// minimum age (each listing is checked).
+/// on `licence` the authority does not issue, in order of date of first issue,
+/// then by title; then, for `own`, the authority's own titles held, in the
+/// order they are listed, those it does not issue, one listed more than once
+/// (reported once), and one first issued before its minimum age (each listing
+/// is checked).
 /// [`LicensingAuthority::licence_title_problems`] is this over the
 /// authority's own titles.
 ///
