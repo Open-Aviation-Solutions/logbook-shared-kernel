@@ -78,11 +78,16 @@ impl LicensingAuthority for Granting {
     rest!();
 
     fn grants_from(&self, assessment: &Assessment, _: &Entry, c: &Classification) -> Vec<Grant> {
-        let info = assessment.authority_information[&self.0].value();
+        let Some(info) = assessment.authority_information.get(&self.0) else {
+            return Vec::new();
+        };
+        let info = info.value();
         if info["kind"] != "flight test" || info["outcome"] != "pass" {
             return Vec::new();
         }
-        let category = c.counts_as[0].id.clone();
+        let Some(category) = c.counts_as.first().map(|t| t.id.clone()) else {
+            return Vec::new();
+        };
         vec![
             Grant::LicenceTitle(LicenceTitleId::National(category)),
             Grant::RatingOrEndorsement(TermId::new("night")),

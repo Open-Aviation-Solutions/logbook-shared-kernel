@@ -167,6 +167,9 @@ pub trait LicensingAuthority {
     /// it does not grant it), and none for a purpose that was failed. The
     /// authority reads its own information on the assessment to tell.
     ///
+    /// What the host keeps, which nothing checks: `entry` is the entry the
+    /// assessment names, and `classification` is of that entry's aircraft.
+    ///
     /// What a host may rely on, which the authority keeps and nothing checks:
     /// each [`Grant`] is an id the authority lists, as a title or as a rating
     /// or endorsement respectively, and none is given twice.
