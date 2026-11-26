@@ -16,10 +16,6 @@ use time::Date;
 /// An authority that leaves `licence_problems` as it is.
 struct Plain(AuthorityId);
 
-/// An authority that warns of a title with no rating, and refuses a rating
-/// without its endorsement.
-struct Strict(AuthorityId);
-
 macro_rules! rest {
     () => {
         fn id(&self) -> &AuthorityId {
@@ -69,39 +65,6 @@ impl LicensingAuthority for Plain {
     rest!();
 }
 
-impl LicensingAuthority for Strict {
-    rest!();
-
-    fn licence_problems(
-        &self,
-        titles: &[LicenceTitleId],
-        ratings_and_endorsements: &[TermId],
-    ) -> Vec<LicenceProblem> {
-        let mut problems = Vec::new();
-        if let Some(title) = titles.first() {
-            if ratings_and_endorsements.is_empty() {
-                problems.push(LicenceProblem::new(
-                    LicenceProblemAt::Title(title.clone()),
-                    ProblemKind::Warning,
-                    "no rating",
-                    "reg 1",
-                ));
-            }
-        }
-        if ratings_and_endorsements.contains(&TermId::new("rating"))
-            && !ratings_and_endorsements.contains(&TermId::new("endorsement"))
-        {
-            problems.push(LicenceProblem::new(
-                LicenceProblemAt::RatingOrEndorsement(TermId::new("rating")),
-                ProblemKind::Refusal,
-                "no endorsement",
-                "reg 2",
-            ));
-        }
-        problems
-    }
-}
-
 fn id() -> AuthorityId {
     AuthorityId::new("XX", "TEST").unwrap()
 }
@@ -115,21 +78,11 @@ fn an_authority_that_does_not_override_it_has_no_problems() {
 }
 
 #[test]
-fn an_authority_gives_a_warning_and_a_refusal_at_where_they_belong() {
-    let a: Box<dyn LicensingAuthority> = Box::new(Strict(id()));
-    let own = LicenceTitleId::National(TermId::new("own"));
-
-    let warned = a.licence_problems(std::slice::from_ref(&own), &[]);
-    assert_eq!(warned.len(), 1);
-    assert_eq!(warned[0].at, LicenceProblemAt::Title(own));
-    assert_eq!(warned[0].kind, ProblemKind::Warning);
-
-    let refused = a.licence_problems(&[], &[TermId::new("rating")]);
-    assert_eq!(refused.len(), 1);
-    assert_eq!(
-        refused[0].at,
-        LicenceProblemAt::RatingOrEndorsement(TermId::new("rating"))
-    );
-    assert_eq!(refused[0].kind, ProblemKind::Refusal);
-    assert_eq!(refused[0].regulation, "reg 2");
+fn a_licence_problem_keeps_what_it_is_given() {
+    let at = LicenceProblemAt::RatingOrEndorsement(TermId::new("rating"));
+    let p = LicenceProblem::new(at.clone(), ProblemKind::Refusal, "no endorsement", "reg 2");
+    assert_eq!(p.at, at);
+    assert_eq!(p.kind, ProblemKind::Refusal);
+    assert_eq!(p.text, "no endorsement");
+    assert_eq!(p.regulation, "reg 2");
 }
