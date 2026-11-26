@@ -126,6 +126,30 @@ pub trait LicensingAuthority {
         licence_title_problems(&self.licence_titles(), licence, own, date_of_birth)
     }
 
+    /// The problems with what is held under one licence of this authority's:
+    /// `titles` are its titles (Annex 1's and the authority's own, as
+    /// [`LicenceTitleId`]s) and `ratings_and_endorsements` the ids of the
+    /// ratings and endorsements held under it. Each problem is a refusal or a
+    /// warning ([`ProblemKind`]). As for
+    /// [`licence_title_problems`](LicensingAuthority::licence_title_problems),
+    /// the licence must be one this authority issued, which is not checked.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// each problem's `at` is one of `titles` or `ratings_and_endorsements`,
+    /// or [`LicenceProblemAt::Licence`], and something missing is reported at
+    /// `Licence`.
+    ///
+    /// None by default; it is separate from the titles' own structural
+    /// problems, which `licence_title_problems` reports.
+    fn licence_problems(
+        &self,
+        titles: &[LicenceTitleId],
+        ratings_and_endorsements: &[TermId],
+    ) -> Vec<LicenceProblem> {
+        let _ = (titles, ratings_and_endorsements);
+        Vec::new()
+    }
+
     /// The requirements these rules check, each with its id, its name in the
     /// regulation's words, a description of what meets it, the noun its
     /// events are counted in, the set it belongs to (with that set's name and
@@ -480,6 +504,48 @@ pub struct Problem {
     pub regulation: &'static str,
 }
 
+/// A problem with what is held under a licence: a refusal, which stops the
+/// licence being saved, or a warning, which the host shows. Built with
+/// [`LicenceProblem::new`], so that a field may be added without breaking an
+/// authority that gives these.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub struct LicenceProblem {
+    pub at: LicenceProblemAt,
+    pub kind: ProblemKind,
+    /// In the authority's words.
+    pub text: String,
+    pub regulation: &'static str,
+}
+
+impl LicenceProblem {
+    pub fn new(
+        at: LicenceProblemAt,
+        kind: ProblemKind,
+        text: impl Into<String>,
+        regulation: &'static str,
+    ) -> Self {
+        Self {
+            at,
+            kind,
+            text: text.into(),
+            regulation,
+        }
+    }
+}
+
+/// Where under a licence a [`LicenceProblem`] is reported, for the host to
+/// show it there.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum LicenceProblemAt {
+    /// At a title held under the licence.
+    Title(LicenceTitleId),
+    /// At a rating or endorsement held under it.
+    RatingOrEndorsement(TermId),
+    /// At the licence as a whole: something missing from it, say.
+    Licence,
+}
+
 /// Where in the authority-specific information a problem is reported, for
 /// the host to show it there.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -494,16 +560,16 @@ pub enum ProblemAt {
     Information,
 }
 
-/// Whether a problem stops the record (an entry or an assessment) being
-/// saved.
+/// Whether a problem stops what it is about being saved: a record (an entry
+/// or an assessment) or what is held under a licence.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ProblemKind {
-    /// The authority cannot accept the information: it contradicts itself,
-    /// or its version is missing or unsupported. The record is not saved.
+    /// The authority cannot accept it: the information contradicts itself,
+    /// or its version is missing or unsupported, or what is held under a
+    /// licence breaks a rule. It is not saved.
     Refusal,
-    /// The information says what the authority's conditions do not
-    /// support. The record is the pilot's claim, so it is saved, and the
-    /// host shows the warning.
+    /// It says what the authority's conditions do not support. It is the
+    /// pilot's claim, so it is saved, and the host shows the warning.
     Warning,
 }
 

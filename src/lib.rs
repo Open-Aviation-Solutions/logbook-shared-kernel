@@ -25,10 +25,10 @@ pub use authority::{
     licence_title_problems, run, run_assessments, Answer, AssessmentAccumulator,
     AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels,
     Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
-    EntryAccumulator, EventWindow, EventsNoun, HeldLicenceTitle, LicenceTitleId,
-    LicenceTitleProblem, LicenceTitleTerm, LicensingAuthority, Measure, MigrationRefused, Problem,
-    ProblemAt, ProblemKind, Question, Questions, Requirement, RequirementId, RequirementKind,
-    RequirementSet, Term, TermId, Total,
+    EntryAccumulator, EventWindow, EventsNoun, HeldLicenceTitle, LicenceProblem, LicenceProblemAt,
+    LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm, LicensingAuthority, Measure,
+    MigrationRefused, Problem, ProblemAt, ProblemKind, Question, Questions, Requirement,
+    RequirementId, RequirementKind, RequirementSet, Term, TermId, Total,
 };
 
 pub use entry::{
