@@ -71,13 +71,19 @@ impl LicensingAuthority for Plain {
 }
 
 /// An authority that reads the purpose and outcome of a flight test from its
-/// information, and names the title for the aircraft's category.
+/// information, names the title for the aircraft's category when it has the
+/// aircraft's classification, and grants a rating whether or not it has.
 struct Granting(AuthorityId);
 
 impl LicensingAuthority for Granting {
     rest!();
 
-    fn grants_from(&self, assessment: &Assessment, _: &Entry, c: &Classification) -> Vec<Grant> {
+    fn grants_from(
+        &self,
+        assessment: &Assessment,
+        _: &Entry,
+        c: Option<&Classification>,
+    ) -> Vec<Grant> {
         let Some(info) = assessment.authority_information.get(&self.0) else {
             return Vec::new();
         };
@@ -85,13 +91,12 @@ impl LicensingAuthority for Granting {
         if info["kind"] != "flight test" || info["outcome"] != "pass" {
             return Vec::new();
         }
-        let Some(category) = c.counts_as.first().map(|t| t.id.clone()) else {
-            return Vec::new();
-        };
-        vec![
-            Grant::LicenceTitle(LicenceTitleId::National(category)),
-            Grant::RatingOrEndorsement(TermId::new("night")),
-        ]
+        let category = c.and_then(|c| c.counts_as.first()).map(|t| t.id.clone());
+        category
+            .map(|category| Grant::LicenceTitle(LicenceTitleId::National(category)))
+            .into_iter()
+            .chain([Grant::RatingOrEndorsement(TermId::new("night"))])
+            .collect()
     }
 }
 
@@ -110,13 +115,17 @@ fn classification() -> Classification {
 }
 
 fn assessed(kind: &str, outcome: &str) -> Vec<Grant> {
+    assessed_as(kind, outcome, Some(&classification()))
+}
+
+fn assessed_as(kind: &str, outcome: &str, c: Option<&Classification>) -> Vec<Grant> {
     let entry = flight("e", Capacity::PilotInCommand);
     let mut a = assessment("a", &entry);
     a.authority_information.insert(
         id(),
         AuthoritySpecificInformation::new(json!({"kind": kind, "outcome": outcome})),
     );
-    Granting(id()).grants_from(&a, &entry, &classification())
+    Granting(id()).grants_from(&a, &entry, c)
 }
 
 #[test]
@@ -124,7 +133,7 @@ fn an_authority_that_does_not_override_it_grants_nothing() {
     let entry = flight("e", Capacity::PilotInCommand);
     let a: Box<dyn LicensingAuthority> = Box::new(Plain(id()));
     assert!(a
-        .grants_from(&assessment("a", &entry), &entry, &classification())
+        .grants_from(&assessment("a", &entry), &entry, Some(&classification()))
         .is_empty());
 }
 
@@ -143,4 +152,12 @@ fn a_passed_flight_test_grants_by_the_aircrafts_classification() {
 fn a_failed_flight_test_or_a_flight_review_grants_nothing() {
     assert!(assessed("flight test", "fail").is_empty());
     assert!(assessed("flight review", "pass").is_empty());
+}
+
+#[test]
+fn with_no_classification_a_passed_flight_test_grants_what_needs_none() {
+    assert_eq!(
+        assessed_as("flight test", "pass", None),
+        [Grant::RatingOrEndorsement(TermId::new("night"))]
+    );
 }

@@ -159,8 +159,9 @@ pub trait LicensingAuthority {
     /// authority's own classification of that entry's aircraft (what
     /// [`classify`](LicensingAuthority::classify) gave for it), since a purpose
     /// may not name its grant fully: a title for the category of the flight's
-    /// aircraft, say. A host that has no classification for the aircraft has
-    /// nothing to ask.
+    /// aircraft, say. The host passes `None` when `classify` gave `None`; the
+    /// authority still gives the grants it can name without a classification,
+    /// and leaves out only those that need one.
     ///
     /// Only a passed flight test grants: none for any other kind of
     /// assessment (a flight review or proficiency check renews what is held,
@@ -168,7 +169,8 @@ pub trait LicensingAuthority {
     /// authority reads its own information on the assessment to tell.
     ///
     /// What the host keeps, which nothing checks: `entry` is the entry the
-    /// assessment names, and `classification` is of that entry's aircraft.
+    /// assessment names, and `classification` is what `classify` gave for that
+    /// entry's aircraft.
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
     /// each [`Grant`] is an id the authority lists, as a title or as a rating
@@ -179,7 +181,7 @@ pub trait LicensingAuthority {
         &self,
         assessment: &Assessment,
         entry: &Entry,
-        classification: &Classification,
+        classification: Option<&Classification>,
     ) -> Vec<Grant> {
         let _ = (assessment, entry, classification);
         Vec::new()
