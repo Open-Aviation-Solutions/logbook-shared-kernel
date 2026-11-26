@@ -44,7 +44,8 @@ wants the records without the interface):
   (`grants_from`, as `Grant`s, none by default); the requirements that apply to the titles,
   ratings and endorsements a pilot holds, by their ids (`requirements_for`;
   which requirement applies to what is the authority's own rule); the
-  accumulator and check traits, the event window and `CurrencyResult`, so
+  accumulator and check traits, the event window and `CurrencyResult` (with its `Expiry`: on a date, or
+  never), so
   each authority writes its currency checks over the same machinery; and the
   description of its questions (`Questions`), in which an authority asks
   about an entry or an assessment (a `Record`) as data, with no dependence on

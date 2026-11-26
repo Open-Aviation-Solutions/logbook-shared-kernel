@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use time::{Date, Duration};
 
-use super::currency::{Contribution, CurrencyResult};
+use super::currency::{Contribution, CurrencyResult, Expiry};
 use super::window::{
     add_months_clamped, count_of_counts_in_window, months_on, nth_most_recent_of_counts,
 };
@@ -151,14 +151,15 @@ impl EventWindow {
         let mut qualifying_assessments = self.qualifying_assessments.clone();
         qualifying_assessments.sort();
         CurrencyResult {
-            expiry_date: nth_most_recent_of_counts(
+            expiry: nth_most_recent_of_counts(
                 self.events_on
                     .iter()
                     .rev()
                     .map(|(on, events)| (*on, *events)),
                 self.required,
             )
-            .and_then(|date| self.look_back.expiry(date)),
+            .and_then(|date| self.look_back.expiry(date))
+            .map(Expiry::On),
             reference: self.reference,
             qualifying,
             qualifying_assessments,
@@ -234,7 +235,7 @@ mod tests {
         let result = window.result();
         assert_eq!(result.found, 0);
         assert_eq!(result.qualifying, []);
-        assert_eq!(result.expiry_date, None); // not just outside the window: never seen
+        assert_eq!(result.expiry, None); // not just outside the window: never seen
     }
 
     #[test]
@@ -251,7 +252,7 @@ mod tests {
         let result = window.result();
         assert_eq!(result.found, 0);
         assert_eq!(result.qualifying_assessments, []);
-        assert_eq!(result.expiry_date, None);
+        assert_eq!(result.expiry, None);
     }
 
     #[test]
@@ -294,7 +295,10 @@ mod tests {
                 events: 4_000_000_000
             }]
         );
-        assert_eq!(result.expiry_date, Some(REFERENCE + Duration::days(90)));
+        assert_eq!(
+            result.expiry,
+            Some(Expiry::On(REFERENCE + Duration::days(90)))
+        );
     }
 
     #[test]
@@ -305,8 +309,10 @@ mod tests {
         let result = window.result();
         assert_eq!(result.found, 4);
         assert_eq!(
-            result.expiry_date,
-            Some(REFERENCE - Duration::days(20) + Duration::days(90))
+            result.expiry,
+            Some(Expiry::On(
+                REFERENCE - Duration::days(20) + Duration::days(90)
+            ))
         );
     }
 
@@ -318,8 +324,10 @@ mod tests {
         let result = window.result();
         assert_eq!(result.found, 1);
         assert_eq!(
-            result.expiry_date,
-            Some(REFERENCE - Duration::days(100) + Duration::days(90))
+            result.expiry,
+            Some(Expiry::On(
+                REFERENCE - Duration::days(100) + Duration::days(90)
+            ))
         );
         assert!(!result.is_current());
     }
@@ -331,7 +339,7 @@ mod tests {
         let result = window.result();
         assert_eq!(result.found, 0);
         assert_eq!(result.qualifying, []);
-        assert_eq!(result.expiry_date, None);
+        assert_eq!(result.expiry, None);
     }
 
     #[test]

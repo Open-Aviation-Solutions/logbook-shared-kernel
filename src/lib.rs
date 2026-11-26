@@ -25,7 +25,7 @@ pub use authority::{
     licence_title_problems, run, run_assessments, Answer, AssessmentAccumulator,
     AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels,
     Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
-    EntryAccumulator, EventWindow, EventsNoun, Grant, HeldLicenceTitle, LicenceProblem,
+    EntryAccumulator, EventWindow, EventsNoun, Expiry, Grant, HeldLicenceTitle, LicenceProblem,
     LicenceProblemAt, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm, LicensingAuthority,
     Measure, MigrationRefused, Problem, ProblemAt, ProblemKind, Question, Questions, Requirement,
     RequirementId, RequirementKind, RequirementSet, Term, TermId, Total,

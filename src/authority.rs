@@ -31,7 +31,7 @@ use crate::entry::{
 };
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
-pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult};
+pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult, Expiry};
 pub use event_window::EventWindow;
 pub use licence_titles::{
     licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,

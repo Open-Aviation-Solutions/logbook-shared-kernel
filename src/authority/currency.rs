@@ -18,15 +18,26 @@ pub struct Contribution {
     pub events: usize,
 }
 
+/// When a currency ends ([`CurrencyResult::expiry`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Expiry {
+    /// On this day, the first day the pilot is not current.
+    On(Date),
+    /// Never: once met, the requirement stays met. A requirement held until a
+    /// later check replaces the one it rests on is this too, until that check
+    /// gives a new result.
+    Never,
+}
+
 /// Outcome of a single currency check.
 ///
-/// `expiry_date` is computed whenever at least `required` qualifying events
-/// have ever occurred, regardless of the look-back window, so a caller can
-/// report both "expires on X" (future) and "expired on X" (past). It is `None`
-/// only when the pilot has never accumulated enough qualifying events.
+/// `expiry` is computed whenever at least `required` qualifying events have
+/// ever occurred, regardless of the look-back window, so a caller can report
+/// both "expires on X" (future) and "expired on X" (past). It is `None` only
+/// when the pilot has never accumulated enough qualifying events.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrencyResult {
-    pub expiry_date: Option<Date>,
+    pub expiry: Option<Expiry>,
     /// The as-of date the check was built for.
     pub reference: Date,
     /// Entries inside the look-back window that had qualifying events, with
@@ -47,16 +58,21 @@ pub struct CurrencyResult {
 
 impl CurrencyResult {
     pub fn is_current(&self) -> bool {
-        self.expiry_date
-            .is_some_and(|expiry| expiry > self.reference)
+        match self.expiry {
+            Some(Expiry::On(expiry)) => expiry > self.reference,
+            Some(Expiry::Never) => true,
+            None => false,
+        }
     }
 
-    /// The last day the pilot is (or was) current: the day before
-    /// `expiry_date`, which is the first day they are not. `None` when they
-    /// never have been.
-    pub fn current_through(&self) -> Option<Date> {
-        self.expiry_date
-            .and_then(|expiry| expiry.checked_sub(Duration::days(1)))
+    /// The last day the pilot is (or was) current: `On` the day before
+    /// `expiry`'s, which is the first day they are not, or `Never` when it is
+    /// `Never`. `None` when they never have been.
+    pub fn current_through(&self) -> Option<Expiry> {
+        match self.expiry? {
+            Expiry::On(expiry) => expiry.checked_sub(Duration::days(1)).map(Expiry::On),
+            Expiry::Never => Some(Expiry::Never),
+        }
     }
 
     /// Further qualifying events needed to become current.
@@ -73,4 +89,48 @@ pub trait CurrencyCheck: EntryAccumulator {
 /// An accumulator over assessments that answers a currency question.
 pub trait AssessmentCurrencyCheck: AssessmentAccumulator {
     fn result(&self) -> CurrencyResult;
+}
+
+#[cfg(test)]
+mod tests {
+    use time::macros::date;
+
+    use super::*;
+
+    fn expiring(expiry: Option<Expiry>) -> CurrencyResult {
+        CurrencyResult {
+            expiry,
+            reference: date!(2026 - 11 - 26),
+            qualifying: Vec::new(),
+            qualifying_assessments: Vec::new(),
+            found: 0,
+            required: 1,
+            look_back_days: 0,
+        }
+    }
+
+    #[test]
+    fn a_result_that_never_expires_is_current_through_never() {
+        let result = expiring(Some(Expiry::Never));
+        assert!(result.is_current());
+        assert_eq!(result.current_through(), Some(Expiry::Never));
+    }
+
+    #[test]
+    fn a_result_is_current_through_the_day_before_it_expires() {
+        let result = expiring(Some(Expiry::On(date!(2026 - 11 - 27))));
+        assert!(result.is_current());
+        assert_eq!(
+            result.current_through(),
+            Some(Expiry::On(date!(2026 - 11 - 26)))
+        );
+        assert!(!expiring(Some(Expiry::On(date!(2026 - 11 - 26)))).is_current());
+    }
+
+    #[test]
+    fn a_result_never_met_is_not_current_through_any_day() {
+        let result = expiring(None);
+        assert!(!result.is_current());
+        assert_eq!(result.current_through(), None);
+    }
 }
