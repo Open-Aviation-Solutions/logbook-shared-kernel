@@ -333,7 +333,7 @@ mod tests {
     }
 
     #[test]
-    fn a_count_of_zero_records_nothing_and_none_required_never_expires() {
+    fn a_count_of_zero_records_nothing_and_none_required_is_never_current() {
         let mut window = EventWindow::new(REFERENCE, 90, 0);
         window.record(&entry("a", REFERENCE), 0);
         let result = window.result();

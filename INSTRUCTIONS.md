@@ -40,16 +40,15 @@ wants the records without the interface):
   rules over a licence's titles that hold for any authority
   (`licence_title_problems`); the problems with what is held under a licence,
   each a refusal or a warning (`licence_problems`, the authority's own, none
-  by default); what a passed flight test would have granted
-  (`grants_from`, as `Grant`s, none by default); the requirements that apply to the titles,
+  by default); what a passed flight test would have granted (`grants_from`,
+  as `Grant`s, none by default); the requirements that apply to the titles,
   ratings and endorsements a pilot holds, by their ids (`requirements_for`;
   which requirement applies to what is the authority's own rule); the
-  accumulator and check traits, the event window and `CurrencyResult` (with its `Expiry`: on a date, or
-  never), so
-  each authority writes its currency checks over the same machinery; and the
-  description of its questions (`Questions`), in which an authority asks
-  about an entry or an assessment (a `Record`) as data, with no dependence on
-  a user interface.
+  accumulator and check traits, the event window and `CurrencyResult` (with
+  its `Expiry`: on a date, or never), so each authority writes its currency
+  checks over the same machinery; and the description of its questions
+  (`Questions`), in which an authority asks about an entry or an assessment
+  (a `Record`) as data, with no dependence on a user interface.
 
 The neutral description of an aircraft type is `aircraft-type-descriptions`'s
 `AircraftDescription`, re-exported from `entry`; this crate defines none of

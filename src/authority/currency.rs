@@ -18,10 +18,14 @@ pub struct Contribution {
     pub events: usize,
 }
 
-/// When a currency ends ([`CurrencyResult::expiry`]).
+/// When a currency ends ([`CurrencyResult::expiry`]), or the last day of it
+/// ([`CurrencyResult::current_through`]).
+///
+/// It is not `#[non_exhaustive]`: a host matches on every way a currency
+/// ends, so a way added later is a breaking release.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Expiry {
-    /// On this day, the first day the pilot is not current.
+    /// On a date: which day it is depends on where the `Expiry` is from.
     On(Date),
     /// Never: once met, the requirement stays met. A requirement held until a
     /// later check replaces the one it rests on is this too, until that check
@@ -33,10 +37,17 @@ pub enum Expiry {
 ///
 /// `expiry` is computed whenever at least `required` qualifying events have
 /// ever occurred, regardless of the look-back window, so a caller can report
-/// both "expires on X" (future) and "expired on X" (past). It is `None` only
-/// when the pilot has never accumulated enough qualifying events.
+/// both "expires on X" (future) and "expired on X" (past). It is `None` when
+/// the pilot has never accumulated enough qualifying events, and for a check
+/// requiring none, which is meaningless.
+///
+/// A check gives [`Expiry::Never`] only once the requirement is met by
+/// `reference`. The counting fields (`found`, `qualifying`,
+/// `qualifying_assessments`, `look_back_days`) are then as the check counted
+/// them, which need not make up `required`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrencyResult {
+    /// `On` the first day the pilot is not current, or `Never`.
     pub expiry: Option<Expiry>,
     /// The as-of date the check was built for.
     pub reference: Date,
@@ -67,7 +78,8 @@ impl CurrencyResult {
 
     /// The last day the pilot is (or was) current: `On` the day before
     /// `expiry`'s, which is the first day they are not, or `Never` when it is
-    /// `Never`. `None` when they never have been.
+    /// `Never`. `None` when they never have been, and for an `expiry` of
+    /// `On(Date::MIN)`, which has no day before it.
     pub fn current_through(&self) -> Option<Expiry> {
         match self.expiry? {
             Expiry::On(expiry) => expiry.checked_sub(Duration::days(1)).map(Expiry::On),
@@ -75,9 +87,14 @@ impl CurrencyResult {
         }
     }
 
-    /// Further qualifying events needed to become current.
+    /// Further qualifying events needed to become current: none when
+    /// current, whatever `found` is.
     pub fn needed(&self) -> usize {
-        self.required.saturating_sub(self.found)
+        if self.is_current() {
+            0
+        } else {
+            self.required.saturating_sub(self.found)
+        }
     }
 }
 
@@ -114,6 +131,14 @@ mod tests {
         let result = expiring(Some(Expiry::Never));
         assert!(result.is_current());
         assert_eq!(result.current_through(), Some(Expiry::Never));
+    }
+
+    #[test]
+    fn a_result_that_never_expires_needs_nothing_with_none_found() {
+        let result = expiring(Some(Expiry::Never));
+        assert_eq!(result.found, 0);
+        assert_eq!(result.needed(), 0);
+        assert_eq!(expiring(None).needed(), 1);
     }
 
     #[test]

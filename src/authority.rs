@@ -159,9 +159,7 @@ pub trait LicensingAuthority {
     /// authority's own classification of that entry's aircraft (what
     /// [`classify`](LicensingAuthority::classify) gave for it), since a purpose
     /// may not name its grant fully: a title for the category of the flight's
-    /// aircraft, say. The host passes `None` when `classify` gave `None`; the
-    /// authority still gives the grants it can name without a classification,
-    /// and leaves out only those that need one.
+    /// aircraft, say. The host passes `None` when `classify` gave `None`.
     ///
     /// Only a passed flight test grants: none for any other kind of
     /// assessment (a flight review or proficiency check renews what is held,
@@ -174,7 +172,9 @@ pub trait LicensingAuthority {
     ///
     /// What a host may rely on, which the authority keeps and nothing checks:
     /// each [`Grant`] is an id the authority lists, as a title or as a rating
-    /// or endorsement respectively, and none is given twice.
+    /// or endorsement respectively, and none is given twice. With no
+    /// classification the authority still gives the grants it can name
+    /// without one, and leaves out only those that need one.
     ///
     /// None by default.
     fn grants_from(
