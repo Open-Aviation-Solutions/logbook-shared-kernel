@@ -26,8 +26,8 @@ use icao_shared_kernel::{FlightDuration, Licence, MinimumAges};
 use time::Date;
 
 use crate::entry::{
-    AircraftCharacteristic, AircraftDescription, AuthorityId, AuthoritySpecificInformation, Entry,
-    Logbook, Record,
+    AircraftCharacteristic, AircraftDescription, Assessment, AuthorityId,
+    AuthoritySpecificInformation, Entry, Logbook, Record,
 };
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
@@ -147,6 +147,38 @@ pub trait LicensingAuthority {
         ratings_and_endorsements: &[TermId],
     ) -> Vec<LicenceProblem> {
         let _ = (titles, ratings_and_endorsements);
+        Vec::new()
+    }
+
+    /// What a passed flight test on `assessment` would have granted, by the
+    /// ids the authority lists them under: a title of licence by
+    /// [`licence_titles`](LicensingAuthority::licence_titles) and a rating or
+    /// endorsement by
+    /// [`ratings_and_endorsements`](LicensingAuthority::ratings_and_endorsements).
+    /// `entry` is the entry the assessment names, and `classification` is this
+    /// authority's own classification of that entry's aircraft (what
+    /// [`classify`](LicensingAuthority::classify) gave for it), since a purpose
+    /// may not name its grant fully: a title for the category of the flight's
+    /// aircraft, say. A host that has no classification for the aircraft has
+    /// nothing to ask.
+    ///
+    /// Only a passed flight test grants: none for any other kind of
+    /// assessment (a flight review or proficiency check renews what is held,
+    /// it does not grant it), and none for a purpose that was failed. The
+    /// authority reads its own information on the assessment to tell.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing checks:
+    /// each [`Grant`] is an id the authority lists, as a title or as a rating
+    /// or endorsement respectively, and none is given twice.
+    ///
+    /// None by default.
+    fn grants_from(
+        &self,
+        assessment: &Assessment,
+        entry: &Entry,
+        classification: &Classification,
+    ) -> Vec<Grant> {
+        let _ = (assessment, entry, classification);
         Vec::new()
     }
 
@@ -502,6 +534,18 @@ pub struct Problem {
     pub kind: ProblemKind,
     pub text: String,
     pub regulation: &'static str,
+}
+
+/// What a passed flight test grants ([`LicensingAuthority::grants_from`]).
+/// The ids are the authority's own, which the host matches by equality and
+/// never parses.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Grant {
+    /// A title of licence: Annex 1's, or the authority's own.
+    LicenceTitle(LicenceTitleId),
+    /// A rating or endorsement.
+    RatingOrEndorsement(TermId),
 }
 
 /// A problem with what is held under a licence: a refusal, which stops the
