@@ -85,4 +85,20 @@ fn a_licence_problem_keeps_what_it_is_given() {
     assert_eq!(p.kind, ProblemKind::Refusal);
     assert_eq!(p.text, "no endorsement");
     assert_eq!(p.regulation, "reg 2");
+    assert_eq!(p.report_leaves_out, None);
+}
+
+#[test]
+fn a_licence_problem_may_say_what_the_report_leaves_out() {
+    let p = LicenceProblem::new(
+        LicenceProblemAt::Licence,
+        ProblemKind::Warning,
+        "t",
+        "reg 2",
+    )
+    .with_report_leaves_out("the proficiency check");
+    assert_eq!(
+        p.report_leaves_out.as_deref(),
+        Some("the proficiency check")
+    );
 }
