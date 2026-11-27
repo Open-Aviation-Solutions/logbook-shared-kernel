@@ -89,6 +89,18 @@ fn a_licence_problem_keeps_what_it_is_given() {
 }
 
 #[test]
+fn a_blank_note_of_what_the_report_leaves_out_is_none() {
+    let p = LicenceProblem::new(
+        LicenceProblemAt::Licence,
+        ProblemKind::Warning,
+        "t",
+        "reg 2",
+    )
+    .with_report_leaves_out(" \t");
+    assert_eq!(p.report_leaves_out, None);
+}
+
+#[test]
 fn a_licence_problem_may_say_what_the_report_leaves_out() {
     let p = LicenceProblem::new(
         LicenceProblemAt::Licence,

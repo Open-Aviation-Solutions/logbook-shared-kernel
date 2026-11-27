@@ -570,9 +570,11 @@ pub struct LicenceProblem {
     /// instrument rating is held without the endorsements it needs. The host
     /// shows it with the report, and never works out for itself which problem
     /// it applies to. `None`: the problem changes nothing in the report.
+    /// Several problems may carry the same note; a host shows equal notes once.
     ///
-    /// What a host may rely on, which the authority keeps and nothing checks:
-    /// when it is `Some`, it is not empty.
+    /// What a host may rely on: when it is `Some`, it is not empty or only
+    /// whitespace; the builder makes sure of this, and an authority setting
+    /// the field itself keeps it.
     pub report_leaves_out: Option<String>,
 }
 
@@ -595,9 +597,10 @@ impl LicenceProblem {
     /// This problem, saying what the report leaves out while it stands
     /// ([`report_leaves_out`](LicenceProblem::report_leaves_out)). A method
     /// on `new`'s result, so that `new` keeps its arguments and an authority
-    /// that gives no such note is unchanged.
+    /// that gives no such note is unchanged. A blank note is no note: the
+    /// field stays `None`.
     pub fn with_report_leaves_out(mut self, note: impl Into<String>) -> Self {
-        self.report_leaves_out = Some(note.into());
+        self.report_leaves_out = Some(note.into()).filter(|n| !n.trim().is_empty());
         self
     }
 }

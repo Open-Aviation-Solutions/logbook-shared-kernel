@@ -39,8 +39,9 @@ wants the records without the interface):
   (`HeldLicenceTitle`; Annex 1's are the kernel's `Licence::titles`) and the
   rules over a licence's titles that hold for any authority
   (`licence_title_problems`); the problems with what is held under a licence,
-  each a refusal or a warning (`licence_problems`, the authority's own, none
-  by default); what a passed flight test would have granted (`grants_from`,
+  each a refusal or a warning, and what the report leaves out while it
+  stands (`licence_problems`, `LicenceProblem::report_leaves_out`; the
+  authority's own, none by default); what a passed flight test would have granted (`grants_from`,
   as `Grant`s, none by default); the requirements that apply to the titles,
   ratings and endorsements a pilot holds, by their ids (`requirements_for`;
   which requirement applies to what is the authority's own rule); the
