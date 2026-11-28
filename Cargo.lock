@@ -4,9 +4,9 @@ version = 4
 
 [[package]]
 name = "aircraft-type-descriptions"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54a93f37983d962650938c7614477a14e7e1327edbfc3579312c075265478c7a"
+checksum = "af2ada2d88d3c015f1d469a828e83ec7d1e47010cb1b9d592172759f9e793f4e"
 dependencies = [
  "serde",
  "toml",
