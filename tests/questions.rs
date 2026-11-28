@@ -71,6 +71,7 @@ fn casa_picus() -> Questions {
             },
         ],
     )
+    .unwrap()
 }
 
 /// EASA's pilot-in-command under supervision (FCL.010; AMC1 FCL.050),
@@ -89,6 +90,7 @@ fn easa_picus() -> Questions {
             required: true,
         }],
     )
+    .unwrap()
 }
 
 /// The keys of the questions that apply to an entry flown in `capacity`.
@@ -332,7 +334,8 @@ fn an_answer_to_a_question_that_does_not_apply_meets_no_condition() {
                 },
             ),
         ],
-    );
+    )
+    .unwrap();
     let information = Some(json!({"first": true}));
     assert_eq!(
         applicable(&questions, Capacity::PilotInCommand, information.clone()),
@@ -366,7 +369,8 @@ fn a_condition_on_a_yes_or_no_answer_matches_the_boolean_stored() {
                 required: false,
             },
         ],
-    );
+    )
+    .unwrap();
     let pic = Capacity::PilotInCommand;
     assert_eq!(
         applicable(&questions, pic, Some(json!({"first": false}))),
@@ -428,7 +432,7 @@ fn the_required_unanswered_questions_are_those_that_apply_without_an_accepted_an
 
 #[test]
 fn the_questions_version_is_stored_with_the_answers_and_read_back() {
-    let questions = Questions::new(2, Vec::new());
+    let questions = Questions::new(2, Vec::new()).unwrap();
     let mut information =
         AuthoritySpecificInformation::new(json!({"route": "operator", "_version": 1}));
     questions.stamp(&mut information);
@@ -489,6 +493,7 @@ fn with_capacity_question() -> Questions {
             question("pic", Some(Condition::Capacity(Capacity::PilotInCommand))),
         ],
     )
+    .unwrap()
 }
 
 #[test]
@@ -591,6 +596,7 @@ fn with_record_questions() -> Questions {
             ),
         ],
     )
+    .unwrap()
 }
 
 fn an_approach() -> Approach {
@@ -685,6 +691,7 @@ fn with_count_question() -> Questions {
             },
         ],
     )
+    .unwrap()
 }
 
 #[test]

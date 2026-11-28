@@ -204,6 +204,28 @@ fn night_over_the_flight_time_is_refused_and_night_equal_to_it_accepted() {
 }
 
 #[test]
+fn instructor_and_examiner_time_over_the_flight_time_are_refused_and_equal_to_it_accepted() {
+    let over = EntryParts {
+        instructor: minutes(61),
+        examiner: minutes(61),
+        ..flight(false)
+    };
+    assert_eq!(
+        refused(over),
+        [
+            EntryError::InstructorOverFlightTime,
+            EntryError::ExaminerOverFlightTime
+        ]
+    );
+    let equal = EntryParts {
+        instructor: minutes(60),
+        examiner: minutes(60),
+        ..flight(false)
+    };
+    assert!(Entry::new(equal).is_ok());
+}
+
+#[test]
 fn instrument_flight_time_over_the_flight_time_is_refused_and_equal_to_it_accepted() {
     let instrument = |actual, simulated| EntryParts {
         instrument: InstrumentTime {

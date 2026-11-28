@@ -13,6 +13,7 @@
 
 mod accumulator;
 mod currency;
+mod entry_fields;
 mod event_window;
 mod licence_titles;
 mod migration;
@@ -32,6 +33,7 @@ use crate::entry::{
 
 pub use accumulator::{run, run_assessments, AssessmentAccumulator, EntryAccumulator};
 pub use currency::{AssessmentCurrencyCheck, Contribution, CurrencyCheck, CurrencyResult, Expiry};
+pub use entry_fields::{entry_field_applies, EntryField};
 pub use event_window::EventWindow;
 pub use licence_titles::{
     licence_title_problems, HeldLicenceTitle, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm,
@@ -39,6 +41,7 @@ pub use licence_titles::{
 pub use migration::MigrationRefused;
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
+    QuestionsError,
 };
 pub use totals::{DateRange, Measure, Total};
 
@@ -238,6 +241,28 @@ pub trait LicensingAuthority {
     /// removes its answer once the record no longer meets the condition;
     /// an answer to a question left out would be kept, as no question's.
     fn questions_for(&self, record: Record) -> Questions;
+
+    /// The fields of an entry these rules ask only on a condition, each with
+    /// that condition: instructor time only of a holder of an instructor
+    /// rating, say (CASR 1998 reg 61.345(3)(g)). A field given no condition
+    /// is asked, so the default, none, asks every field. The host evaluates
+    /// them with [`entry_field_applies`], and asks a field when any of the
+    /// pilot's authorities asks it.
+    ///
+    /// A condition is evaluated against the entry and what the pilot held on
+    /// its date ([`Condition::Holds`]). No answer is given to it, so a
+    /// condition on an answer ([`Condition::Answer`],
+    /// [`Condition::CountAtLeast`]) never holds here.
+    ///
+    /// They decide only what is asked, not what is valid: a value in a field
+    /// that is not asked is still accepted and kept.
+    ///
+    /// What a host may rely on, which the authority keeps and nothing
+    /// checks: each field is given at most once. A field given more than
+    /// once is asked when any of its conditions holds.
+    fn entry_fields(&self) -> Vec<(EntryField, Condition)> {
+        Vec::new()
+    }
 
     /// The problems with `information`, the authority's information on
     /// `record`, each at a question or at the information as a whole

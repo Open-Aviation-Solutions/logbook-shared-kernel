@@ -52,6 +52,8 @@ pub fn flight_parts(id: &str, capacity: Capacity) -> EntryParts {
         flight_rules: None,
         flight_time: FlightDuration::new(60).unwrap(),
         night: FlightDuration::new(0).unwrap(),
+        instructor: FlightDuration::new(0).unwrap(),
+        examiner: FlightDuration::new(0).unwrap(),
         capacity,
         pilot_in_command: None,
         flight_crew: Vec::new(),

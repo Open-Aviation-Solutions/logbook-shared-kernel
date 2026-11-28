@@ -58,7 +58,7 @@ macro_rules! rest {
             Vec::new()
         }
         fn questions_for(&self, _: Record) -> Questions {
-            Questions::new(1, Vec::new())
+            Questions::new(1, Vec::new()).unwrap()
         }
         fn problems_for(&self, _: Record, _: &AuthoritySpecificInformation) -> Vec<Problem> {
             Vec::new()

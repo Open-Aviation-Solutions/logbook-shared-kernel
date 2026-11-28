@@ -29,7 +29,8 @@ What it holds, in two modules:
 - **`entry`**: the logbook's common entry, in ICAO's terms (the date, the
   aircraft or the flight simulation training device, the route, the flight
   rules, the flight time and night, the capacity in which the pilot flew,
-  instrument time, approaches, take-offs and landings); an authority's own
+  instrument time, approaches, take-offs and landings, and instructor and
+  examiner time, which Annex 1 does not define); an authority's own
   information on it or on an assessment, which holds the answers to the
   authority's questions, each under its question's key, and their version
   under the key `_version`, which is reserved: no question may use it; the
@@ -43,7 +44,7 @@ What it holds, in two modules:
   built once (one object) for each authority it serves (whether an entry
   counts under its rules, what an aircraft counts as and what it requires,
   the titles of licence it issues and its minimum ages, with the rules over the titles a pilot holds, and the problems with what is held under a licence, each a refusal or a warning and what the report leaves out while it stands, what a passed flight test would have granted,
-  its requirements, those that apply to what a pilot holds, and their currency, its own totals, the questions it asks about an entry or an assessment,
+  its requirements, those that apply to what a pilot holds, and their currency, its own totals, which of an entry's fields it asks and on what condition, the questions it asks about an entry or an assessment,
   the problems with its answers, and the migration of its stored information to the version it writes); the machinery its currency checks are
   written over; and the description of those questions, as data for the host
   to show.
