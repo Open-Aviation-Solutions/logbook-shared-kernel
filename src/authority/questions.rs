@@ -15,9 +15,12 @@
 //! are the authority's
 //! [`problems_for`](super::LicensingAuthority::problems_for), in code.
 
+use std::collections::BTreeSet;
+
 use icao_shared_kernel::Capacity;
 use serde_json::Value;
 
+use super::TermId;
 use crate::entry::{AuthoritySpecificInformation, Record, Subject};
 
 /// The questions an authority asks about a record, in order, and the
@@ -109,7 +112,7 @@ impl Questions {
             if question
                 .applies_when
                 .as_ref()
-                .is_none_or(|condition| condition.holds(record, &answer))
+                .is_none_or(|condition| condition.holds(record, &answer, None))
             {
                 applicable.push(question);
             }
@@ -377,7 +380,8 @@ pub struct ChoiceKind {
     pub label: String,
 }
 
-/// When a question applies to a record.
+/// When a question applies to a record, or an entry's field is asked
+/// ([`LicensingAuthority::entry_fields`](super::LicensingAuthority::entry_fields)).
 ///
 /// A condition on an answer may refer only to an earlier question:
 /// [`Questions::applicable_for`] counts only the answers to earlier
@@ -415,6 +419,17 @@ pub enum Condition {
     /// least `n`. A missing answer, or one that is not a count, does not
     /// meet it. Only the answer to an earlier question that applies counts.
     CountAtLeast { key: &'static str, n: u64 },
+    /// The pilot holds the title of licence, rating or endorsement with this
+    /// id, under the licences the authority issued, on the entry's date: one
+    /// of the ids in the `held` given to [`entry_field_applies`], which reads
+    /// them as [`requirements_for`] does.
+    ///
+    /// It holds only for an entry's field. In a question's `applies_when`
+    /// it never holds, as [`Questions`] is given nothing held.
+    ///
+    /// [`entry_field_applies`]: super::entry_field_applies
+    /// [`requirements_for`]: super::LicensingAuthority::requirements_for
+    Holds(TermId),
     /// Every one of these. With none, it always holds.
     All(Vec<Condition>),
     /// Any one of these. With none, it never holds.
@@ -423,8 +438,14 @@ pub enum Condition {
 
 impl Condition {
     /// Whether the condition holds, with `answer` giving the answer to each
-    /// key, if given.
-    fn holds<'s>(&self, record: Record, answer: &dyn Fn(&str) -> Option<&'s Value>) -> bool {
+    /// key, if given, and `held` what the pilot holds, if given: with
+    /// `None`, [`Condition::Holds`] never holds.
+    pub(super) fn holds<'s>(
+        &self,
+        record: Record,
+        answer: &dyn Fn(&str) -> Option<&'s Value>,
+        held: Option<&BTreeSet<TermId>>,
+    ) -> bool {
         match self {
             Self::Capacity(capacity) => {
                 matches!(record, Record::Entry(entry) if entry.capacity() == *capacity)
@@ -445,12 +466,13 @@ impl Condition {
                 .filter(|value| Answer::Count.accepts(value))
                 .and_then(Value::as_u64)
                 .is_some_and(|count| count >= *n),
+            Self::Holds(id) => held.is_some_and(|held| held.contains(id)),
             Self::All(conditions) => conditions
                 .iter()
-                .all(|condition| condition.holds(record, answer)),
+                .all(|condition| condition.holds(record, answer, held)),
             Self::Any(conditions) => conditions
                 .iter()
-                .any(|condition| condition.holds(record, answer)),
+                .any(|condition| condition.holds(record, answer, held)),
         }
     }
 }

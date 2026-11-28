@@ -14,7 +14,11 @@ The crate holds, in one crate and two modules (split only if something
 wants the records without the interface):
 
 - **`entry`**: the logbook's common entry, the pilot's claim in ICAO's terms
-  (taken from `icao-shared-kernel`); an authority's information on it or on
+  (taken from `icao-shared-kernel`), with instructor and examiner time, which
+  Annex 1 does not define but the authorities that ask for them name alike
+  (decided on
+  [#65](https://github.com/Open-Aviation-Solutions/logbook-shared-kernel/issues/65));
+  an authority's information on it or on
   an assessment (`AuthoritySpecificInformation`), stored as the authority
   gives it, holding the answers to its questions under each question's key
   (which `Questions` reads to decide which questions apply), and the questions'
@@ -47,7 +51,10 @@ wants the records without the interface):
   which requirement applies to what is the authority's own rule); the
   accumulator and check traits, the event window and `CurrencyResult` (with
   its `Expiry`: on a date, or never), so each authority writes its currency
-  checks over the same machinery; and the description of its questions
+  checks over the same machinery; the fields of the entry it asks only on a
+  condition (`entry_fields`, each an `EntryField` with a `Condition`, which
+  `entry_field_applies` evaluates against the entry and what the pilot held
+  on its date); and the description of its questions
   (`Questions`), in which an authority asks about an entry or an assessment
   (a `Record`) as data, with no dependence on a user interface.
 
@@ -79,7 +86,9 @@ is not.
 
 - **Discuss before implementing** non-trivial design changes.
 - **Regulatory terms only**: names and terminology must be verifiable against
-  ICAO's Annex 1 for the common entry, and against the regulation an example or
+  ICAO's Annex 1 for the common entry (for a field Annex 1 does not define,
+  such as instructor time, against the regulations of the authorities that ask
+  for it, in the noun they share), and against the regulation an example or
   test quotes. A name that no regulation uses is not introduced.
 - **Cite only what has been read.** A citation in a doc comment is checked
   against the rule's own text, not a summary of it, and one that cannot be

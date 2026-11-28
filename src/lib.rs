@@ -22,13 +22,14 @@ pub mod authority;
 pub mod entry;
 
 pub use authority::{
-    licence_title_problems, run, run_assessments, Answer, AssessmentAccumulator,
-    AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels,
-    Classification, Condition, Contribution, CurrencyCheck, CurrencyResult, DateRange,
-    EntryAccumulator, EventWindow, EventsNoun, Expiry, Grant, HeldLicenceTitle, LicenceProblem,
-    LicenceProblemAt, LicenceTitleId, LicenceTitleProblem, LicenceTitleTerm, LicensingAuthority,
-    Measure, MigrationRefused, Problem, ProblemAt, ProblemKind, Question, Questions, Requirement,
-    RequirementId, RequirementKind, RequirementSet, Term, TermId, Total,
+    entry_field_applies, licence_title_problems, run, run_assessments, Answer,
+    AssessmentAccumulator, AssessmentCurrencyCheck, AuthorityTotal, Choice, ChoiceGroup,
+    ChoiceKind, ChoicesLabels, Classification, Condition, Contribution, CurrencyCheck,
+    CurrencyResult, DateRange, EntryAccumulator, EntryField, EventWindow, EventsNoun, Expiry,
+    Grant, HeldLicenceTitle, LicenceProblem, LicenceProblemAt, LicenceTitleId, LicenceTitleProblem,
+    LicenceTitleTerm, LicensingAuthority, Measure, MigrationRefused, Problem, ProblemAt,
+    ProblemKind, Question, Questions, Requirement, RequirementId, RequirementKind, RequirementSet,
+    Term, TermId, Total,
 };
 
 pub use entry::{
