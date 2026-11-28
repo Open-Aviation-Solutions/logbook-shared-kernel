@@ -215,6 +215,12 @@ impl Entry {
         if parts.night > parts.flight_time {
             errors.push(EntryError::NightOverFlightTime);
         }
+        if parts.instructor > parts.flight_time {
+            errors.push(EntryError::InstructorOverFlightTime);
+        }
+        if parts.examiner > parts.flight_time {
+            errors.push(EntryError::ExaminerOverFlightTime);
+        }
         let instrument = &parts.instrument;
         // `None`: more than a duration can hold, and so more than the flight
         // time.
@@ -298,7 +304,9 @@ impl Entry {
     }
 
     /// The flight time the pilot spent exercising the privileges of a flight
-    /// examiner rating (CASR 1998 reg 61.345(3)(h)). Zero: none.
+    /// examiner rating (CASR 1998 reg 61.345(3)(h)). Zero: none. On a
+    /// session, what it means is the authority's (CASA's reg 61.345(4)
+    /// asks for none): the kernel neither refuses nor reads it there.
     ///
     /// Annex 1 defines no examiner time. This is a field common to the
     /// authorities that ask for it, named with the noun they use. What
@@ -370,6 +378,10 @@ pub enum EntryError {
     SoleOccupantInCapacityNeedingAnotherPilot(Capacity),
     /// More night than flight time.
     NightOverFlightTime,
+    /// More instructor time than flight time.
+    InstructorOverFlightTime,
+    /// More examiner time than flight time.
+    ExaminerOverFlightTime,
     /// More instrument time than flight time: instrument flight time on a
     /// flight, instrument ground time on a session.
     InstrumentOverFlightTime,
@@ -406,6 +418,12 @@ impl fmt::Display for EntryError {
                 )
             }
             Self::NightOverFlightTime => f.write_str("the night time is more than the flight time"),
+            Self::InstructorOverFlightTime => {
+                f.write_str("the instructor time is more than the flight time")
+            }
+            Self::ExaminerOverFlightTime => {
+                f.write_str("the examiner time is more than the flight time")
+            }
             Self::InstrumentOverFlightTime => {
                 f.write_str("the instrument time is more than the flight time")
             }

@@ -41,6 +41,7 @@ pub use licence_titles::{
 pub use migration::MigrationRefused;
 pub use questions::{
     Answer, Choice, ChoiceGroup, ChoiceKind, ChoicesLabels, Condition, Question, Questions,
+    QuestionsError,
 };
 pub use totals::{DateRange, Measure, Total};
 

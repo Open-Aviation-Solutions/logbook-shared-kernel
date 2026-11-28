@@ -16,7 +16,7 @@ use logbook_shared_kernel::{
     entry_field_applies, AircraftCharacteristic, AircraftDescription, Answer, AuthorityId,
     AuthoritySpecificInformation, AuthorityTotal, Classification, Condition, CurrencyResult,
     DateRange, Entry, EntryField, EntryParts, LicenceTitleTerm, LicensingAuthority, Logbook,
-    Problem, Question, Questions, Record, Requirement, RequirementId, Term, TermId,
+    Problem, Question, Questions, QuestionsError, Record, Requirement, RequirementId, Term, TermId,
 };
 use time::Date;
 
@@ -57,7 +57,7 @@ macro_rules! rest {
             Vec::new()
         }
         fn questions_for(&self, _: Record) -> Questions {
-            Questions::new(1, Vec::new())
+            Questions::new(1, Vec::new()).unwrap()
         }
         fn problems_for(&self, _: Record, _: &AuthoritySpecificInformation) -> Vec<Problem> {
             Vec::new()
@@ -141,9 +141,32 @@ fn an_authority_that_does_not_override_it_asks_every_field() {
 }
 
 #[test]
-fn with_no_authority_every_field_is_asked() {
+fn with_no_authority_no_field_is_asked() {
     let entry = flight("e", Capacity::PilotInCommand);
-    assert!(entry_field_applies(EntryField::Instructor, &entry, []));
+    assert!(!entry_field_applies(EntryField::Instructor, &entry, []));
+}
+
+#[test]
+fn holds_is_met_by_a_title_of_licence_held() {
+    /// An authority that asks instructor time of the holder of a title.
+    struct ByTitle(AuthorityId);
+    impl LicensingAuthority for ByTitle {
+        rest!();
+        fn entry_fields(&self) -> Vec<(EntryField, Condition)> {
+            vec![(
+                EntryField::Instructor,
+                Condition::Holds(TermId::new("title")),
+            )]
+        }
+    }
+    let by_title = ByTitle(authority("TEST"));
+    let held = holding(&[TermId::new("title")]);
+    let entry = flight("e", Capacity::PilotInCommand);
+    assert!(entry_field_applies(
+        EntryField::Instructor,
+        &entry,
+        [(&by_title as &dyn LicensingAuthority, &held)]
+    ));
 }
 
 #[test]
@@ -213,20 +236,28 @@ fn a_value_in_a_field_not_asked_is_kept() {
 }
 
 #[test]
-fn holds_never_holds_in_a_question() {
-    let questions = Questions::new(
-        1,
-        vec![Question {
-            key: "k",
-            label: "A question for an instructor".into(),
-            regulation: "reg 1",
-            answer: Answer::YesNo,
-            applies_when: Some(Condition::Holds(flight_instructor())),
-            required: true,
-        }],
+fn holds_is_refused_in_a_question_at_any_depth() {
+    let asked_when = |applies_when| {
+        Questions::new(
+            1,
+            vec![Question {
+                key: "k",
+                label: "A question for an instructor".into(),
+                regulation: "reg 1",
+                answer: Answer::YesNo,
+                applies_when: Some(applies_when),
+                required: true,
+            }],
+        )
+    };
+    let refused = Err(QuestionsError::HoldsInQuestion("k"));
+    assert_eq!(asked_when(Condition::Holds(flight_instructor())), refused);
+    assert_eq!(
+        asked_when(Condition::Any(vec![
+            Condition::Session,
+            Condition::All(vec![Condition::Holds(flight_instructor())]),
+        ])),
+        refused
     );
-    let entry = session("s", Capacity::PilotInCommand);
-    assert!(questions
-        .applicable_for(Record::Entry(&entry), None)
-        .is_empty());
+    assert!(asked_when(Condition::Session).is_ok());
 }

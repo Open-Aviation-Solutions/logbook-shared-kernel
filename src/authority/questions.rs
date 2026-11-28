@@ -16,6 +16,7 @@
 //! [`problems_for`](super::LicensingAuthority::problems_for), in code.
 
 use std::collections::BTreeSet;
+use std::fmt;
 
 use icao_shared_kernel::Capacity;
 use serde_json::Value;
@@ -43,8 +44,19 @@ impl Questions {
     ///
     /// No question's key may be [`AuthoritySpecificInformation::VERSION_KEY`].
     /// Nothing checks the questions for this.
-    pub fn new(version: u32, questions: Vec<Question>) -> Self {
-        Self { version, questions }
+    ///
+    /// Refused when a question's `applies_when` holds a
+    /// [`Condition::Holds`], at any depth: it is for an entry's fields only.
+    pub fn new(version: u32, questions: Vec<Question>) -> Result<Self, QuestionsError> {
+        if let Some(question) = questions.iter().find(|question| {
+            question
+                .applies_when
+                .as_ref()
+                .is_some_and(Condition::contains_holds)
+        }) {
+            return Err(QuestionsError::HoldsInQuestion(question.key));
+        }
+        Ok(Self { version, questions })
     }
 
     /// The version of the stored format of the answers, for the authority
@@ -171,6 +183,30 @@ impl Questions {
             .collect()
     }
 }
+
+/// Why [`Questions::new`] refused the questions. Its `Display` is plain
+/// English, for logs. Non-exhaustive: a rule added later is not a breaking
+/// change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum QuestionsError {
+    /// The question with this key has a [`Condition::Holds`] in its
+    /// `applies_when`.
+    HoldsInQuestion(&'static str),
+}
+
+impl fmt::Display for QuestionsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::HoldsInQuestion(key) => write!(
+                f,
+                "the question \"{key}\" applies on what the pilot holds, which only an entry's field may"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for QuestionsError {}
 
 impl<'a> IntoIterator for &'a Questions {
     type Item = &'a Question;
@@ -424,8 +460,8 @@ pub enum Condition {
     /// of the ids in the `held` given to [`entry_field_applies`], which reads
     /// them as [`requirements_for`] does.
     ///
-    /// It holds only for an entry's field. In a question's `applies_when`
-    /// it never holds, as [`Questions`] is given nothing held.
+    /// It is for an entry's fields only: [`Questions::new`] refuses a
+    /// question whose `applies_when` holds it.
     ///
     /// [`entry_field_applies`]: super::entry_field_applies
     /// [`requirements_for`]: super::LicensingAuthority::requirements_for
@@ -437,6 +473,17 @@ pub enum Condition {
 }
 
 impl Condition {
+    /// Whether it is, or holds at any depth, a [`Condition::Holds`].
+    fn contains_holds(&self) -> bool {
+        match self {
+            Self::Holds(_) => true,
+            Self::All(conditions) | Self::Any(conditions) => {
+                conditions.iter().any(Self::contains_holds)
+            }
+            _ => false,
+        }
+    }
+
     /// Whether the condition holds, with `answer` giving the answer to each
     /// key, if given, and `held` what the pilot holds, if given: with
     /// `None`, [`Condition::Holds`] never holds.

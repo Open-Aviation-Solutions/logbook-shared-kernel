@@ -28,8 +28,8 @@ pub use authority::{
     CurrencyResult, DateRange, EntryAccumulator, EntryField, EventWindow, EventsNoun, Expiry,
     Grant, HeldLicenceTitle, LicenceProblem, LicenceProblemAt, LicenceTitleId, LicenceTitleProblem,
     LicenceTitleTerm, LicensingAuthority, Measure, MigrationRefused, Problem, ProblemAt,
-    ProblemKind, Question, Questions, Requirement, RequirementId, RequirementKind, RequirementSet,
-    Term, TermId, Total,
+    ProblemKind, Question, Questions, QuestionsError, Requirement, RequirementId, RequirementKind,
+    RequirementSet, Term, TermId, Total,
 };
 
 pub use entry::{

@@ -76,8 +76,8 @@ impl LicensingAuthority for FlightsOnly {
     /// a test can tell which the version was taken for.
     fn questions_for(&self, record: Record) -> Questions {
         match record {
-            Record::Entry(_) => Questions::new(1, Vec::new()),
-            Record::Assessment { .. } => Questions::new(3, Vec::new()),
+            Record::Entry(_) => Questions::new(1, Vec::new()).unwrap(),
+            Record::Assessment { .. } => Questions::new(3, Vec::new()).unwrap(),
         }
     }
 
